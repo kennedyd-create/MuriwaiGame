@@ -1,0 +1,2657 @@
+<title>Muriwai Quest</title>
+<style>
+  :root{
+    --ink:#0c1a1f;
+    --panel:#112227;
+    --panel-2:#16303a;
+    --bronze:#3f6b78;
+    --bronze-dim:#1e3a42;
+    --gold:#d7a63b;
+    --gold-bright:#f0c766;
+    --paper:#eaf0ea;
+    --paper-dim:#d7e0d6;
+    --paper-ink:#152524;
+    --text:#e6f1ef;
+    --text-mute:#7fa3a5;
+    --sea:#3f6577;
+    --sea-deep:#1e3541;
+    --sand:#332e28;
+    --sand-fleck:#6b6255;
+    --dune:#78855a;
+    --dune-dark:#525c3c;
+    --cliff:#5c5044;
+    --cliff-dark:#38312a;
+    --bad:#c15a4a;
+    --good:#7ea86a;
+    --radius:0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Manrope',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;
+    font-weight:500;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding:18px 14px 40px;
+  }
+  h1,h2,h3,.pixel{
+    font-family:'Manrope',ui-sans-serif,system-ui,sans-serif;
+    font-weight:800;
+    letter-spacing:0.5px;
+  }
+  .wrap{
+    width:100%;
+    max-width:1080px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+
+  /* ---------- Header / HUD ---------- */
+  .titlebar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    border:3px solid var(--bronze);
+    background:linear-gradient(180deg,#172b32,#0f2025);
+    padding:12px 16px;
+  }
+  .titlebar h1{
+    font-size:15px;
+    color:var(--gold-bright);
+    margin:0;
+    text-shadow:2px 2px 0 #000;
+  }
+  .titlebar .sub{
+    font-size:10px;
+    color:var(--text-mute);
+    margin-top:4px;
+  }
+  .hud{
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+    font-size:10px;
+  }
+  .hud .stat{display:flex;flex-direction:column;gap:4px;min-width:76px;}
+  .hud .stat .label{color:var(--text-mute);font-size:8px;letter-spacing:1px;}
+  .hud .stat .value{color:var(--paper);font-family:'Manrope',sans-serif;font-weight:800;font-size:13px;}
+  .xpbar{width:110px;height:10px;background:#000;border:2px solid var(--bronze);position:relative;}
+  .xpbar-fill{position:absolute;inset:0;background:linear-gradient(90deg,var(--gold),var(--gold-bright));width:0%;transition:width .35s ease;}
+  .hud-btn{
+    font-family:'Manrope',sans-serif;
+    font-weight:700;
+    letter-spacing:0.3px;
+    font-size:11px;
+    background:var(--panel-2);
+    color:var(--paper);
+    border:2px solid var(--bronze);
+    padding:9px 10px;
+    cursor:pointer;
+    line-height:1;
+  }
+  .hud-btn:hover{border-color:var(--gold);color:var(--gold-bright);}
+  .hud-btn:focus-visible, button:focus-visible, [tabindex]:focus-visible{outline:3px solid var(--gold-bright);outline-offset:2px;}
+
+  /* ---------- Main game area ---------- */
+  .game-layout{
+    display:grid;
+    grid-template-columns:1fr 300px;
+    gap:14px;
+  }
+  @media (max-width:820px){
+    .game-layout{grid-template-columns:1fr;}
+  }
+
+  .stage{
+    border:3px solid var(--bronze);
+    background:#000;
+    padding:10px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .zone-banner{
+    font-family:'Manrope',sans-serif;
+    font-weight:800;
+    letter-spacing:0.4px;
+    font-size:12px;
+    color:var(--gold-bright);
+    background:var(--panel);
+    border:2px solid var(--bronze-dim);
+    padding:8px 10px;
+  }
+  .zone-banner .desc{
+    font-family:'Manrope',sans-serif;
+    font-weight:500;
+    font-size:11.5px;
+    color:var(--text-mute);
+    margin-top:6px;
+    letter-spacing:0;
+  }
+  .canvas-frame{
+    position:relative;
+    width:100%;
+    aspect-ratio:13/8;
+    background:#000;
+    border:2px solid var(--bronze-dim);
+    overflow:hidden;
+  }
+  #game{
+    width:100%;
+    height:100%;
+    display:block;
+    image-rendering:pixelated;
+    image-rendering:crisp-edges;
+  }
+  .toast{
+    position:absolute;
+    left:8px;right:8px;bottom:8px;
+    background:rgba(0,0,0,.72);
+    border:2px solid var(--gold);
+    color:var(--gold-bright);
+    font-size:10px;
+    padding:8px 10px;
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity .25s ease, transform .25s ease;
+    pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  .controls-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .kbd-hint{font-size:10px;color:var(--text-mute);}
+  .kbd-hint b{color:var(--paper);}
+  .dpad{
+    display:grid;
+    grid-template-columns:repeat(3,34px);
+    grid-template-rows:repeat(2,34px);
+    gap:4px;
+    align-items:center;
+  }
+  .dpad button{
+    background:var(--panel-2);
+    border:2px solid var(--bronze);
+    color:var(--paper);
+    font-size:13px;
+    cursor:pointer;
+  }
+  .dpad button:active{background:var(--gold);color:#000;}
+  .dpad .up{grid-column:2;grid-row:1;}
+  .dpad .left{grid-column:1;grid-row:2;}
+  .dpad .act{grid-column:2;grid-row:2;background:var(--gold);color:#000;font-family:'Manrope',sans-serif;font-weight:800;letter-spacing:0.3px;font-size:9px;}
+  .dpad .right{grid-column:3;grid-row:2;}
+
+  /* ---------- Journal ---------- */
+  .journal{
+    border:3px solid var(--bronze);
+    background:var(--panel);
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .journal-head{
+    padding:10px 12px;
+    border-bottom:2px solid var(--bronze-dim);
+    font-family:'Manrope',sans-serif;
+    font-weight:800;
+    letter-spacing:0.4px;
+    font-size:12px;
+    color:var(--gold-bright);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .journal-tabs{
+    display:flex;
+    border-bottom:2px solid var(--bronze-dim);
+  }
+  .journal-tab{
+    flex:1;
+    font-family:'Manrope',sans-serif;
+    font-weight:700;
+    font-size:10.5px;
+    letter-spacing:0.5px;
+    background:var(--panel);
+    color:var(--text-mute);
+    border:none;
+    border-right:1px solid var(--bronze-dim);
+    padding:9px 6px;
+    cursor:pointer;
+  }
+  .journal-tab:last-child{border-right:none;}
+  .journal-tab.active{background:var(--panel-2);color:var(--gold-bright);box-shadow:inset 0 -2px 0 var(--gold);}
+  .journal-body{
+    padding:10px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    max-height:560px;
+    overflow-y:auto;
+  }
+  .check-item{
+    background:var(--panel-2);
+    border:2px solid var(--bronze-dim);
+    padding:9px 10px;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .check-item.done{border-color:var(--good);background:rgba(126,168,106,.1);}
+  .check-box{
+    flex:none;
+    width:18px;height:18px;
+    border:2px solid var(--bronze);
+    background:var(--panel);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;
+    color:var(--good);
+    margin-top:1px;
+  }
+  .check-item.done .check-box{border-color:var(--good);background:rgba(126,168,106,.18);}
+  .check-item h4{margin:0 0 4px;font-size:11.5px;color:var(--text);}
+  .check-item.done h4{color:var(--good);}
+  .check-item p{margin:0;font-size:11px;line-height:1.5;color:var(--text-mute);}
+  .check-item .how{margin-top:5px;font-size:9.5px;color:var(--bronze);letter-spacing:.2px;}
+  .check-item.done .how{color:var(--good);}
+  .card{
+    background:var(--paper);
+    color:var(--paper-ink);
+    border:2px solid var(--bronze-dim);
+    padding:9px 10px;
+  }
+  .card.locked{
+    background:var(--panel-2);
+    color:var(--text-mute);
+    border-style:dashed;
+  }
+  .card h4{margin:0 0 5px;font-family:'Manrope',sans-serif;font-weight:800;font-size:11px;color:#16302d;}
+  .card.locked h4{color:var(--text-mute);}
+  .card ul{margin:0;padding-left:16px;font-size:11px;line-height:1.5;}
+  .card.locked ul{display:none;}
+  .card .tag{font-size:9px;color:var(--bronze);letter-spacing:1px;}
+  .card.locked .tag{color:var(--text-mute);}
+
+  .map-track{
+    padding:10px 12px;
+    border-top:2px solid var(--bronze-dim);
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .map-dot{
+    font-size:9px;
+    padding:5px 7px;
+    border:2px solid var(--bronze-dim);
+    color:var(--text-mute);
+    background:var(--panel-2);
+  }
+  .map-dot.done{border-color:var(--good);color:var(--good);}
+  .map-dot.here{border-color:var(--gold);color:var(--gold-bright);}
+
+  /* ---------- Overlays ---------- */
+  .overlay{
+    position:fixed;inset:0;
+    background:rgba(8,6,4,.86);
+    display:flex;align-items:center;justify-content:center;
+    padding:16px;
+    z-index:40;
+  }
+  .overlay[hidden]{display:none;}
+  .modal{
+    width:100%;max-width:620px;
+    background:var(--panel);
+    border:3px solid var(--gold);
+    max-height:90vh;
+    display:flex;flex-direction:column;
+  }
+  .modal-head{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 14px;
+    border-bottom:2px solid var(--bronze-dim);
+    background:var(--panel-2);
+  }
+  .npc-badge{
+    width:34px;height:34px;flex:none;
+    border:2px solid var(--bronze);
+  }
+  .title-head{
+    position:relative;overflow:hidden;
+    padding:18px 16px;
+    background:linear-gradient(135deg, var(--bronze-dim) 0%, #1c3038 45%, var(--bronze-dim) 100%);
+    border-bottom:2px solid var(--gold);
+  }
+  .title-head::before{
+    content:'';position:absolute;inset:0;
+    background:repeating-linear-gradient(115deg, rgba(215,166,59,.07) 0px, rgba(215,166,59,.07) 2px, transparent 2px, transparent 20px);
+    pointer-events:none;
+  }
+  .title-head::after{
+    content:'';position:absolute;left:-20%;right:-20%;bottom:-60%;height:140%;
+    background:radial-gradient(ellipse at center, rgba(215,166,59,.16) 0%, transparent 68%);
+    pointer-events:none;
+  }
+  .title-emblem{flex:none;width:46px;height:46px;position:relative;z-index:1;filter:drop-shadow(0 0 6px rgba(215,166,59,.4));}
+  .title-head > div{position:relative;z-index:1;}
+  .title-head h3{font-size:16px;letter-spacing:2.5px;text-shadow:0 0 14px rgba(240,199,102,.45);}
+  .title-head .role{margin-top:5px;font-size:10px;}
+  .modal-head h3{margin:0;font-size:11px;color:var(--gold-bright);}
+  .modal-head .role{font-size:9px;color:var(--text-mute);margin-top:4px;}
+  .modal-body{
+    padding:16px;
+    overflow-y:auto;
+    font-size:13px;
+    line-height:1.65;
+    color:var(--paper);
+  }
+  .modal-body p{margin:0 0 12px;}
+  .dlg-note{font-size:11px;color:var(--text-mute);margin-top:10px;}
+  .opt-list{display:flex;flex-direction:column;gap:8px;margin-top:6px;}
+  .opt-btn{
+    text-align:left;
+    background:var(--panel-2);
+    border:2px solid var(--bronze);
+    color:var(--text);
+    padding:10px 12px;
+    font-family:'Manrope',sans-serif;
+    font-weight:500;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .opt-btn:hover{border-color:var(--gold);}
+  .opt-btn.correct{border-color:var(--good);background:#213321;color:#cdeec1;}
+  .opt-btn.wrong{border-color:var(--bad);background:#3a1f26;color:#f0ccd2;}
+  .opt-btn:disabled{cursor:default;}
+  .feedback{
+    margin-top:10px;padding:10px 12px;
+    border-left:4px solid var(--gold);
+    background:rgba(215,166,59,.09);
+    font-size:12.5px;
+  }
+  .feedback.bad{border-color:var(--bad);background:rgba(193,90,74,.1);}
+  .essay-textarea{
+    width:100%;box-sizing:border-box;
+    min-height:130px;
+    background:var(--ink);
+    color:var(--paper);
+    border:2px solid var(--bronze);
+    font-family:'Manrope',sans-serif;
+    font-weight:500;
+    font-size:13px;line-height:1.6;
+    padding:10px;
+    resize:vertical;
+    margin-top:6px;
+  }
+  .essay-textarea:focus{outline:none;border-color:var(--gold);}
+  .essay-wordcount{font-size:10px;color:var(--text-mute);margin-top:4px;text-align:right;}
+  .essay-grade{
+    font-family:'Manrope',sans-serif;
+    font-weight:800;
+    letter-spacing:0.4px;
+    font-size:12px;
+    margin-top:12px;margin-bottom:8px;
+    color:var(--gold-bright);
+  }
+  .essay-crit{
+    background:var(--panel-2);
+    border:2px solid var(--bronze-dim);
+    padding:8px 9px;
+    display:flex;gap:9px;align-items:flex-start;
+    margin-bottom:6px;
+    font-size:11.5px;
+  }
+  .essay-crit.met{border-color:var(--good);background:rgba(126,168,106,.1);}
+  .essay-crit .box{
+    flex:none;width:16px;height:16px;
+    border:2px solid var(--bronze);
+    background:var(--panel);
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;color:var(--good);
+    margin-top:1px;
+  }
+  .essay-crit.met .box{border-color:var(--good);}
+  .essay-crit .lbl{color:var(--text);}
+  .essay-crit.met .lbl{color:var(--good);}
+  .essay-crit .crit-tip{display:block;margin-top:3px;font-size:10px;color:var(--bronze);}
+  .essay-crit.met .crit-tip{display:none;}
+  .modal-foot{
+    padding:12px 14px;
+    border-top:2px solid var(--bronze-dim);
+    display:flex;justify-content:flex-end;gap:8px;
+    flex-wrap:wrap;
+  }
+  .btn{
+    font-family:'Manrope',sans-serif;
+    font-weight:700;
+    letter-spacing:0.3px;
+    font-size:12px;
+    background:var(--gold);
+    color:#12211f;
+    border:2px solid #a67f1e;
+    padding:10px 14px;
+    cursor:pointer;
+  }
+  .btn:hover{background:var(--gold-bright);}
+  .btn.ghost{background:transparent;color:var(--paper);border-color:var(--bronze);}
+  .btn.ghost:hover{border-color:var(--gold);color:var(--gold-bright);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  .order-pool,.order-seq{
+    display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;min-height:40px;
+    padding:8px;border:2px dashed var(--bronze-dim);
+  }
+  .order-seq{border-style:solid;background:rgba(0,0,0,.2);}
+  .chip{
+    background:var(--paper);color:var(--paper-ink);
+    border:2px solid var(--bronze-dim);
+    padding:7px 9px;font-size:11.5px;cursor:pointer;
+    max-width:100%;
+  }
+  .chip:hover{border-color:var(--gold);}
+  .seq-num{color:var(--bronze);font-weight:bold;margin-right:6px;}
+
+  .card-pick{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:8px;margin-top:8px;
+  }
+  .pick-card{
+    background:var(--paper);color:var(--paper-ink);
+    border:2px solid var(--bronze-dim);
+    padding:8px 9px;font-size:11px;cursor:pointer;
+    text-align:left;
+  }
+  .pick-card.selected{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset;}
+  .pick-card.correct{border-color:var(--good);box-shadow:0 0 0 2px var(--good) inset;background:#dff0d6;}
+  .pick-card.wrong{border-color:var(--bad);box-shadow:0 0 0 2px var(--bad) inset;background:#f3ddd8;}
+  .pick-card b{display:block;font-size:10.5px;margin-bottom:3px;}
+
+  /* Title screen */
+  .titlescreen .modal{max-width:560px;}
+  .legend{display:flex;flex-direction:column;gap:6px;margin:12px 0;font-size:11.5px;}
+  .legend div{display:flex;gap:8px;}
+  .legend kbd{background:#000;border:1px solid var(--bronze);padding:2px 6px;font-family:'Manrope',sans-serif;font-weight:700;}
+
+  .grade-banner{
+    text-align:center;padding:16px;margin-bottom:10px;
+    border:3px solid var(--gold);background:rgba(215,166,59,.1);
+  }
+  .grade-banner .grade{font-family:'Manrope',sans-serif;font-weight:800;letter-spacing:0.4px;font-size:22px;color:var(--gold-bright);text-shadow:2px 2px 0 #000;}
+  .grade-banner .sub{font-size:11px;color:var(--text-mute);margin-top:8px;}
+  .grade-banner.fail{border-color:var(--bad);background:rgba(193,90,74,.14);}
+  .grade-banner.fail .grade{color:#ff6b57;}
+
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;}
+
+  @media (prefers-reduced-motion:reduce){
+    *{scroll-behavior:auto !important;}
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+
+<div class="wrap">
+
+  <div class="titlebar">
+    <div>
+      <h1>MURIWAI QUEST</h1>
+      <div class="sub">NCEA L3 Geography &middot; Standard 91426 &middot; Field Expedition Simulator</div>
+    </div>
+    <div class="hud">
+      <div class="stat"><span class="label">RANK</span><span class="value" id="hud-level">Lv 1</span></div>
+      <div class="stat">
+        <span class="label">XP</span>
+        <div class="xpbar"><div class="xpbar-fill" id="hud-xpfill"></div></div>
+      </div>
+      <div class="stat"><span class="label">FIELD DATA</span><span class="value" id="hud-cards">0/9</span></div>
+      <button class="hud-btn" id="btn-preview" aria-haspopup="dialog">&#128065; PREVIEW</button>
+      <button class="hud-btn" id="btn-help" aria-haspopup="dialog">? HELP</button>
+      <button class="hud-btn" id="btn-reset" aria-haspopup="dialog">&#8635; RESET</button>
+    </div>
+  </div>
+  <div id="preview-banner" hidden style="border:3px solid var(--gold);background:rgba(215,166,59,.12);color:var(--gold-bright);font-family:'Manrope',sans-serif;font-weight:700;letter-spacing:0.3px;font-size:11px;padding:8px 12px;text-align:center;">
+    PREVIEW MODE ON — every path is open and every card is visible for review. Turn it off before handing this to students.
+  </div>
+
+  <div class="game-layout">
+    <div class="stage">
+      <div class="zone-banner">
+        <div id="zone-name">MURIWAI BEACH — The Dune Frontier</div>
+        <div class="desc" id="zone-desc">A wide, dissipative black-sand beach.</div>
+      </div>
+      <div class="canvas-frame">
+        <canvas id="game" width="416" height="256" role="img" aria-label="Pixel-art game world. Use arrow keys to move your field researcher and Space to interact."></canvas>
+        <div class="toast" id="toast"></div>
+      </div>
+      <div class="controls-row">
+        <div class="kbd-hint">Move: <b>Arrow keys</b> / <b>WASD</b> &nbsp;&middot;&nbsp; Interact: <b>Space</b> or <b>Enter</b></div>
+        <div class="dpad" aria-label="Touch controls">
+          <button class="up" data-dir="up" aria-label="Move up">&#9650;</button>
+          <button class="left" data-dir="left" aria-label="Move left">&#9664;</button>
+          <button class="act" id="btn-interact" aria-label="Interact">TALK</button>
+          <button class="right" data-dir="right" aria-label="Move right">&#9654;</button>
+          <button class="down" data-dir="down" style="grid-column:2;grid-row:2;visibility:hidden;" aria-hidden="true"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="journal">
+      <div class="journal-head">
+        <span id="journal-title">FIELD JOURNAL</span>
+        <span id="journal-count">0/9</span>
+      </div>
+      <div class="journal-tabs">
+        <button class="journal-tab active" id="tab-data" data-tab="data">FIELD DATA</button>
+        <button class="journal-tab" id="tab-checklist" data-tab="checklist">3.1 CHECKLIST</button>
+      </div>
+      <div class="journal-body" id="journal-body"></div>
+      <div class="map-track" id="map-track"></div>
+    </div>
+  </div>
+
+  <div style="font-size:10px;color:var(--text-mute);text-align:center;padding:4px 0;">
+    All coastal process data drawn from the Muriwai Excellence Hub case-study bank &middot; Progress saves automatically to this browser
+  </div>
+</div>
+
+<!-- Title / Start overlay -->
+<div class="overlay titlescreen" id="overlay-title">
+  <div class="modal">
+    <div class="modal-head title-head">
+      <div class="title-emblem" aria-hidden="true">
+        <svg viewBox="0 0 44 44" width="46" height="46" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="titleEmblemGold" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f0c766"/>
+              <stop offset="1" stop-color="#d7a63b"/>
+            </linearGradient>
+          </defs>
+          <circle cx="22" cy="22" r="20" fill="#0c1a1f" stroke="url(#titleEmblemGold)" stroke-width="2"/>
+          <g stroke="url(#titleEmblemGold)" stroke-width="1" opacity="0.55">
+            <line x1="22" y1="3" x2="22" y2="9"/>
+            <line x1="22" y1="35" x2="22" y2="41"/>
+            <line x1="3" y1="22" x2="9" y2="22"/>
+            <line x1="35" y1="22" x2="41" y2="22"/>
+          </g>
+          <polygon points="22,10 25.5,22 22,34 18.5,22" fill="url(#titleEmblemGold)"/>
+          <polygon points="10,22 22,18.5 34,22 22,25.5" fill="url(#titleEmblemGold)" opacity="0.55"/>
+          <circle cx="22" cy="22" r="2.6" fill="#0c1a1f" stroke="url(#titleEmblemGold)" stroke-width="1.4"/>
+        </svg>
+      </div>
+      <div>
+        <h3>MURIWAI QUEST</h3>
+        <div class="role">A field-research RPG for Geography 3.1 (91426)</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p>You've been sent to survey the Muriwai coastal environment. Walk the coast, question the locals, and gather the field data an Excellence essay needs — then defend it in front of the Examiner.</p>
+      <div class="legend">
+        <div><kbd>&#8592;&#8593;&#8594;&#8595;</kbd> or <kbd>WASD</kbd> — walk</div>
+        <div><kbd>Space</kbd> / <kbd>Enter</kbd> — talk to whoever you're facing</div>
+        <div>On touch devices, use the on-screen pad below the map.</div>
+      </div>
+      <p class="dlg-note" id="continue-note" hidden>You have an expedition in progress.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="btn-newgame">New Expedition</button>
+      <button class="btn" id="btn-continue" hidden>Continue</button>
+      <button class="btn" id="btn-start" >Start Expedition</button>
+    </div>
+  </div>
+</div>
+
+<!-- Help overlay -->
+<div class="overlay" id="overlay-help" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3>HOW TO PLAY</h3></div>
+    <div class="modal-body">
+      <div class="legend">
+        <div><kbd>&#8592;&#8593;&#8594;&#8595;</kbd> / <kbd>WASD</kbd> — walk one tile</div>
+        <div><kbd>Space</kbd> / <kbd>Enter</kbd> — talk to the character you're facing</div>
+        <div>Rock falls and driftwood block a path until you've solved every question in that area.</div>
+        <div>Correct answers add a Field Data card to your journal (right-hand panel) — you'll need them later.</div>
+        <div>Wrong answers just explain the gap and let you try again — no penalty.</div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" id="btn-help-close">Got it</button></div>
+  </div>
+</div>
+
+<!-- Reset confirm overlay -->
+<div class="overlay" id="overlay-reset" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3>RESET PROGRESS?</h3></div>
+    <div class="modal-body"><p>This clears all field data, XP, and your position, and starts the expedition over from Muriwai Beach. This can't be undone.</p></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="btn-reset-cancel">Cancel</button>
+      <button class="btn" id="btn-reset-confirm">Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- Preview / jump-to-zone overlay (for reviewing content, not for students) -->
+<div class="overlay" id="overlay-preview" hidden>
+  <div class="modal">
+    <div class="modal-head"><h3>PREVIEW &amp; JUMP TO ZONE</h3></div>
+    <div class="modal-body">
+      <p>Preview mode leaves every barrier open and shows every field-data card at the Examiner, so you can walk straight to any part of the expedition. NPC questions still show their real content — nothing is pre-answered — so you can check them properly. Jump to a zone below, or just walk once preview is on.</p>
+      <button class="btn" id="btn-preview-toggle" style="width:100%;margin-bottom:12px;"></button>
+      <div class="legend" style="gap:8px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="opt-btn jump-btn" data-jump="beach">1. Muriwai Beach — The Dune Frontier</button>
+          <button class="opt-btn jump-btn" data-jump="otakamiro">2. Otakamiro Point — Caves, Arches &amp; the Time Rift</button>
+          <button class="opt-btn jump-btn" data-jump="maoribay">3. Maori Bay — The Bare Cliffs</button>
+          <button class="opt-btn jump-btn" data-jump="seasonshrine">4. The Season Shrine — Profile MUPA</button>
+          <button class="opt-btn jump-btn" data-jump="examiner">5. The Examiner’s Tower</button>
+        </div>
+      </div>
+      <p class="dlg-note">Jumping to a zone turns preview mode on automatically, so the walk there is never blocked.</p>
+    </div>
+    <div class="modal-foot"><button class="btn ghost" id="btn-preview-close">Close</button></div>
+  </div>
+</div>
+
+<!-- Dialogue overlay (generic NPC + season altar) -->
+<div class="overlay" id="overlay-dlg" hidden>
+  <div class="modal">
+    <div class="modal-head">
+      <div class="npc-badge" id="dlg-badge"></div>
+      <div>
+        <h3 id="dlg-name">NPC</h3>
+        <div class="role" id="dlg-role">Role</div>
+      </div>
+    </div>
+    <div class="modal-body" id="dlg-body"></div>
+    <div class="modal-foot" id="dlg-foot"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* =========================================================
+   CONSTANTS
+========================================================= */
+var TILE = 32, COLS = 13, ROWS = 8;
+var REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var SAVE_KEY = 'muriwaiQuest_save_v1';
+
+/* =========================================================
+   CONTENT DATA — field data cards
+========================================================= */
+var CARDS = {
+  hydroSupply: { title:'Hydrological Supply', facts:[
+    'Tidal range: 3–3.5 m (macrotidal)',
+    'Wave energy: up to 400,000 kJ (winter, destructive)',
+    'Fetch: 2,000 km across the Tasman Sea',
+    'Sand: 95% volcanic ironsand (titanomagnetite) from Taranaki/Taupō — 3% Okiritoto Stream, 2% headland',
+    'Heavy titanomagnetite settles first; lighter quartz, silica & feldspar carry further and transport more easily'
+  ]},
+  aeolianTransport: { title:'Aeolian Transport', facts:[
+    'Fluid threshold: 20 km/h (5.47 m/s)',
+    'Saltation = 75% of transport, lifts grains to 17 cm',
+    'Prevailing SW & W winds blow onshore 59% of the time',
+    'Wind exceeds the 5.47 m/s deflation threshold 67% of the time'
+  ]},
+  vegetationStabilisation: { title:'Vegetation Stabilisation', facts:[
+    'North: native Spinifex spreads by runners — gentle, wide dunes, 6–8 m at ~20°',
+    'South: exotic Marram grows vertically — steep, unstable dunes, 8–12 m at 23–45°, prone to slumping',
+    'Both create a "zone of zero wind velocity" up to 10 cm above the surface, forcing deposition',
+    'Halophytic pioneer species — roots bind sand while burial forces further upward growth'
+  ]},
+  longshoreDrift: { title:'Longshore Drift', facts:[
+    '~250,000 m³ of sand moves north per year',
+    'Refraction reverses drift south in the 500 m stretch north of the headland',
+    'Southern beach ~200 m wide — double the ~100 m northern beach width'
+  ]},
+  geologicTime: { title:'Geologic Time (Macro-Temporal)', facts:[
+    '17 Ma: submarine eruption, Manukau Super Volcano — Manukau Breccia & Piha Conglomerate',
+    'Megapillow lavas formed 1,000–2,000 m below sea level',
+    'Otakamiro Headland exposed by uplift along the Helensville Fault, ~10,000 years ago',
+    'Now dismantled by wave refraction & hydraulic action'
+  ]},
+  caveArchStack: { title:'Cave–Arch–Stack Sequence', facts:[
+    '17-million-year-old Manukau Breccia, 35 m cliffs',
+    'Concentrated wave energy up to 300,000 kJ',
+    'Motutara Island = the resulting ~35 m stack, ~40 m SW of the headland',
+    'Erosion mechanisms: hydraulic action, abrasion/corrasion, attrition, corrosion/solution'
+  ]},
+  spatialVariationMaoriBay: { title:'Spatial Variation — Maori Bay', facts:[
+    'Beach <100 m wide, vs 300 m+ at Muriwai Beach',
+    'Cliffs 30–70 m of resistant Manukau Breccia',
+    'High tide reaches the cliff base, removing sediment'
+  ]},
+  shorePlatform: { title:'Shore Platform — Fisherman’s Rock', facts:[
+    '400–450 m long inter-tidal wave-cut platform',
+    'Inner platform: ~2 m above sea level, water-layer (salt) weathering',
+    'Seaward rampart: ~3 m, protected by constant splash'
+  ]},
+  seasonalDecadal: { title:'Seasonal & Decadal Change', facts:[
+    'Summer: constructive waves 25,000–100,000 J/m³, <1.5 m — steeper 5–10° face with a prominent berm',
+    'Winter: destructive waves >400,000 J/m³, >3–5 m — flat, dissipative 1–2.5° profile, offshore bar',
+    'Profile MUPA retreating 1–1.5 m/yr since the 1960s; 2008 carpark collapse'
+  ]}
+};
+var CARD_ORDER = ['hydroSupply','aeolianTransport','vegetationStabilisation','longshoreDrift','geologicTime','caveArchStack','spatialVariationMaoriBay','shorePlatform','seasonalDecadal'];
+
+/* =========================================================
+   ZONES
+========================================================= */
+function Z(rows){ return rows; }
+
+var ZONES = {
+  beach: {
+    id:'beach', name:'MURIWAI BEACH — The Dune Frontier',
+    desc:'A wide, dissipative black-sand beach — 300 m of exposed foreshore at low tide, backed by foredunes up to 15 m high.',
+    theme:'beach',
+    terrain: Z([
+      'CCCCCCCCCCCCC',
+      'C...........C',
+      'C..D.....D..C',
+      'C.....G.....C',
+      'C..D.....D..C',
+      'C...........C',
+      'C...........C',
+      '~~~~~~~~~~~~~'
+    ]),
+    entry:{x:2,y:6,dir:'up'},
+    objects:[
+      {kind:'npc', id:'tideRanger', x:3, y:2, hat:'brim', color:'#4fb3bf'},
+      {kind:'npc', id:'duneEcologist', x:7, y:3, hat:'leaf', color:'#7ea86a'},
+      {kind:'npc', id:'spinifexGuardian', x:9, y:4, hat:'spike', color:'#c9b23a'},
+      {kind:'barrier', id:'beachBarrier', x:11, y:4, requires:['tideRanger','duneEcologist','spinifexGuardian']},
+      {kind:'exit', x:12, y:4, exitDir:'right', to:'otakamiro', entry:{x:1,y:4,dir:'right'}}
+    ]
+  },
+
+  otakamiro: {
+    id:'otakamiro', name:'OTAKAMIRO POINT — Caves, Arches & the Time Rift',
+    desc:'17-million-year-old Manukau Breccia, carved by wave refraction into caves, arches, and the offshore stack of Motutara Island. Oaia Island sits further out to sea, a companion landform shaped the same way.',
+    theme:'headland',
+    terrain: Z([
+      'CCCCCCCCCCCCC',
+      'C...........C',
+      'C..C.....C..C',
+      'C...........C',
+      'C..C.....C..C',
+      'C...........C',
+      'C...........C',
+      '~~~~~~~~~~~~~'
+    ]),
+    entry:{x:1,y:4,dir:'right'},
+    objects:[
+      {kind:'npc', id:'driftSurveyor', x:2, y:2, hat:'clip', color:'#4a7fbf'},
+      {kind:'special', id:'timeRift', x:6, y:3},
+      {kind:'npc', id:'caveSurveyor', x:10, y:5, hat:'hard', color:'#c97a33'},
+      {kind:'barrier', id:'otakamiroBarrier', x:11, y:5, requires:['driftSurveyor','timeRift','caveSurveyor']},
+      {kind:'exit', x:12, y:5, exitDir:'right', to:'maoribay', entry:{x:1,y:3,dir:'right'}}
+    ]
+  },
+
+  maoribay: {
+    id:'maoribay', name:'MAORI BAY — The Bare Cliffs',
+    desc:'Just 500 m south of the dunes — and not a single one grows here. Steep 30–70 m cliffs box in a beach barely 100 m wide.',
+    theme:'cliff',
+    terrain: Z([
+      'CCCCCCCCCCCCC',
+      'C...........C',
+      'C.C.......C.C',
+      'C...........C',
+      'C.C.......C.C',
+      'C...........C',
+      'C...........C',
+      '~~~~~~~~~~~~~'
+    ]),
+    entry:{x:1,y:3,dir:'right'},
+    objects:[
+      {kind:'npc', id:'cliffSurveyor', x:4, y:2, hat:'binoc', color:'#8a93a8'},
+      {kind:'npc', id:'shorePlatformDiver', x:8, y:4, hat:'wave', color:'#3f6577', optional:true},
+      {kind:'barrier', id:'maoriBarrier', x:11, y:3, requires:['cliffSurveyor']},
+      {kind:'exit', x:12, y:3, exitDir:'right', to:'seasonshrine', entry:{x:1,y:4,dir:'right'}}
+    ]
+  },
+
+  seasonshrine: {
+    id:'seasonshrine', name:'THE SEASON SHRINE — Profile MUPA',
+    desc:'Near the southern carpark, where Profile MUPA has quietly retreated for sixty years.',
+    theme:'shrine',
+    terrain: Z([
+      'CCCCCCCCCCCCC',
+      'C...........C',
+      'C..D.....D..C',
+      'C...........C',
+      'C..D.....D..C',
+      'C...........C',
+      'C...........C',
+      '~~~~~~~~~~~~~'
+    ]),
+    entry:{x:1,y:4,dir:'right'},
+    objects:[
+      {kind:'special', id:'seasonAltar', x:6, y:3},
+      {kind:'npc', id:'councilSurveyor', x:9, y:4, hat:'hivis', color:'#2e4a63'},
+      {kind:'barrier', id:'shrineBarrier', x:11, y:4, requires:['councilSurveyor']},
+      {kind:'exit', x:12, y:4, exitDir:'right', to:'examiner', entry:{x:1,y:6,dir:'up'}}
+    ]
+  },
+
+  examiner: {
+    id:'examiner', name:'THE EXAMINER’S TOWER',
+    desc:'One question stands between you and Excellence.',
+    theme:'tower',
+    terrain: Z([
+      'CCCCCCCCCCCCC',
+      'C...........C',
+      'C...........C',
+      'C...........C',
+      'C...........C',
+      'C...........C',
+      'C...........C',
+      'CCCCCCCCCCCCC'
+    ]),
+    entry:{x:1,y:6,dir:'up'},
+    objects:[
+      {kind:'npc', id:'examiner', x:6, y:2, hat:'mortar', color:'#6a4a8a'},
+      {kind:'npc', id:'examinerClerk', x:9, y:5, hat:'clip', color:'#d7a63b'}
+    ]
+  }
+};
+
+/* =========================================================
+   NPC DIALOGUE DATA
+========================================================= */
+var NPCS = {
+
+  tideRanger: {
+    zone:'beach', name:'Tide Ranger', role:'Hydrological data', color:'#4fb3bf',
+    type:'mcq',
+    intro:'"Logging today’s readings. Muriwai’s a macro-tidal system — reckon you can tell me the vertical tidal range?"',
+    question:'What is Muriwai’s vertical tidal range?',
+    options:['6–8 m','0.5–1 m','10 m or more','3–3.5 m'],
+    correct:3,
+    successText:'"Spot on. That 3–3.5 m swing is what exposes all this wet sand for the wind to work on later."',
+    failText:'"Not quite — think macro-tidal, bigger than you’d guess. Have another go."',
+    xp:15, card:'hydroSupply'
+  },
+
+  duneEcologist: {
+    zone:'beach', name:'Dune Ecologist', role:'Aeolian transport — sequence', color:'#7ea86a',
+    type:'order',
+    intro:'"Everyone sees the dune. Nobody can tell me the six steps that build it. Try me — put these in order."',
+    prompt:'Arrange the stages of foredune formation, in order:',
+    items:[
+      'Constructive waves deposit wet sand across the wide foreshore at low tide',
+      'Solar radiation dries the exposed 0.25 mm titanomagnetite sand',
+      'Onshore SW winds exceed the 20 km/h fluid threshold',
+      'Saltation lifts grains up to 17 cm in a chain-reaction bounce',
+      'Spinifex disrupts the wind’s boundary layer and forces deposition',
+      'Burial stimulates vertical growth, binding sand into a 10–15 m foredune'
+    ],
+    successText:'"That’s the chain. Hydrological supply, climatological transport, biogeographical stabilisation — in that order, every time."',
+    failText:'"Close, but a step’s out of place. Think: wet, then dry, then windy, then bound. Try again."',
+    xp:25, card:'aeolianTransport'
+  },
+
+  spinifexGuardian: {
+    zone:'beach', name:'Spinifex Guardian', role:'Vegetation stabilisation', color:'#c9b23a',
+    type:'mcq',
+    intro:'"The dune keeps rising around me. What’s actually happening, do you reckon?"',
+    question:'Why does sand keep depositing right here, and not further down the open beach?',
+    options:[
+      'The plant’s leaves are sticky and grains adhere to them',
+      'The plant physically disrupts the wind’s boundary layer, dropping local wind velocity below the fluid threshold',
+      'The plant releases a scent that attracts drifting sand',
+      'The plant’s roots draw moisture into the sand nearby, weighing it down'
+    ],
+    correct:1,
+    successText:'"Exactly — it’s aerodynamics, not glue. Drop the wind speed below 5.47 m/s and gravity does the rest. Geographers call that pocket of still air right at the surface the zone of zero wind velocity — it only reaches about 10 cm up, but that’s all it takes."',
+    failText:'"Think about what the plant’s shape does to moving air, not what it does chemically. Try again."',
+    xp:15, card:'vegetationStabilisation'
+  },
+
+  driftSurveyor: {
+    zone:'otakamiro', name:'Drift Surveyor', role:'Longshore drift — anomaly', color:'#4a7fbf',
+    type:'mcq',
+    intro:'"For 95% of this beach my compass points the drift north. Not here though — we’re in the 500 m stretch just north of the headland."',
+    question:'What direction does longshore drift run in this 500 m stretch, and why?',
+    options:[
+      'Still north — the headland has no effect on drift direction',
+      'It stops completely — no drift occurs near headlands',
+      'South — wave refraction bends waves around the point, reversing the swash angle',
+      'Straight offshore — the headland deflects all wave energy seaward'
+    ],
+    correct:2,
+    successText:'"Right. Refraction bends the waves clean around Otakamiro, so right here the drift runs backwards — and the beach is wider for it."',
+    failText:'"Remember what refraction does to wave orthogonals around a headland. Try again."',
+    xp:15, card:'longshoreDrift'
+  },
+
+  timeRift: {
+    zone:'otakamiro', name:'The Time Rift', role:'Macro-temporal variation', color:'#8a6ab0',
+    type:'mcq',
+    isSpecial:true,
+    beats:[
+      { kind:'scene', text:'The air shimmers. The cliffs blur into deep water, ash, and glowing basalt — you’re standing on the seabed, 1,000–2,000 m down, 17 million years ago. The Manukau Super Volcano erupts around you, layering the megapillow lavas that will one day become Manukau Breccia and Piha Conglomerate.' },
+      { kind:'scene', text:'The vision jumps forward — the same rock, thrust up into daylight along the Helensville Fault only 10,000 years ago. You’re back on the clifftop, today, and the processes acting on it have completely reversed.' }
+    ],
+    question:'Which best contrasts the dominant process here 17 million years ago with today?',
+    options:[
+      'Then and now the dominant process has always been wave erosion, just at different intensities',
+      'Then: erosion by ancient rivers; Now: construction by modern wind-blown sand',
+      'Then: biogeographical reef growth; Now: geomorphological uplift',
+      'Then: geomorphological construction (submarine volcanic eruption); Now: hydrological & climatological erosion tearing the same rock down'
+    ],
+    correct:3,
+    successText:'"That’s the whole story of Otakamiro in one line — built by fire, being undone by water and wind."',
+    failText:'"Think about what kind of process builds rock versus what kind wears it away. Try again."',
+    xp:20, card:'geologicTime'
+  },
+
+  caveSurveyor: {
+    zone:'otakamiro', name:'Cave Surveyor', role:'Cave–arch–stack — sequence', color:'#c97a33',
+    type:'order',
+    intro:'"Motutara Island out there didn’t just appear. Seven steps got it there — put them in order and I’ll clear the rockfall."',
+    prompt:'Sequence the formation of Motutara Island:',
+    items:[
+      'Wave orthogonals refract around the headland and converge',
+      'Concentrated energy, up to 300,000 kJ, intensifies hydraulic action',
+      'Compressed air shatters rock in fissures; corrasion abrades the base',
+      'A sea cave is carved at the high-tide mark',
+      'Continued erosion breaks the cave through to form an arch',
+      'The unsupported arch roof collapses',
+      'An isolated stack — Motutara Island — remains offshore'
+    ],
+    successText:'"That’s it — refraction, hydraulic action, corrasion, cave, arch, stack. Every headland tells this story eventually."',
+    failText:'"Refraction has to come first — everything else is a consequence of it. Try again."',
+    xp:25, card:'caveArchStack'
+  },
+
+  cliffSurveyor: {
+    zone:'maoribay', name:'Cliff-top Surveyor', role:'Spatial variation', color:'#8a93a8',
+    type:'mcq',
+    intro:'"You’ve just walked out of dune country. Barely 500 m, and look — nothing. Why do you reckon that is?"',
+    question:'What best explains the total absence of dunes at Maori Bay, just 500 m from Muriwai Beach?',
+    options:[
+      'There simply happens to be less wind at Maori Bay',
+      'The narrow (<100 m) beach and 30–70 m cliffs starve the system of sand and steady wind, while high tides wash away what little accumulates',
+      'Maori Bay receives more rainfall, which washes sand away',
+      'The sand here is a different colour, so it doesn’t hold together'
+    ],
+    correct:1,
+    successText:'"That’s the full chain, not just one factor — topography starves the sand supply AND kills the wind AND the tide finishes the job."',
+    failText:'"One factor alone doesn’t explain it — look for the option that links topography, sand supply, wind AND tide together. Try again."',
+    xp:20, card:'spatialVariationMaoriBay'
+  },
+
+  shorePlatformDiver: {
+    zone:'maoribay', name:'Shore Platform Diver', role:'Micro-spatial (optional)', color:'#3f6577',
+    type:'mcq',
+    intro:'"Bonus round, if you’re keen — that’s Fisherman’s Rock, 400 to 450 m of shore platform. Inner section’s only 2 m high, but the seaward rampart out there sits at 3 m. Why?"',
+    question:'Why does the seaward rampart stay a metre higher than the inner shore platform?',
+    options:[
+      'The rampart is protected because it faces away from the sun',
+      'The rampart is made of harder rock than the inner platform',
+      'Constant wave splash keeps the rampart wet, preventing the salt-crystal weathering that erodes the drier inner platform',
+      'Marine organisms cement the rampart together with shell material'
+    ],
+    correct:2,
+    successText:'"Exactly — dry-out-and-crystallise is what eats the inner platform. Stay wet and you’re safe from it."',
+    failText:'"Think about what causes water-layer weathering in the first place — and what would stop it. Try again."',
+    xp:15, card:'shorePlatform'
+  },
+
+  councilSurveyor: {
+    zone:'seasonshrine', name:'Council Surveyor', role:'Decadal & seasonal change', color:'#2e4a63',
+    type:'mcq',
+    intro:'"Try the altar behind me first — flip it between summer and winter. Then come back and tell me how fast this carpark’s been losing ground since the 1960s."',
+    question:'Since the 1960s, Profile MUPA (right here by the carpark) has retreated at roughly…',
+    options:['1–1.5 m per year','0.1 m per year','20 m per year','5 m per year'],
+    correct:0,
+    successText:'"Right — 1 to 1.5 m a year, every year, until 2008 when the carpark edge finally gave way and had to be rebuilt in 2009."',
+    failText:'"It’s slow but relentless — metres, not centimetres, per year. Try again."',
+    xp:20, card:'seasonalDecadal'
+  },
+
+  examiner: {
+    zone:'examiner', name:'The Examiner', role:'Standard 91426 — Boss', color:'#6a4a8a',
+    type:'boss'
+  },
+
+  examinerClerk: {
+    zone:'examiner', name:'The Invigilator', role:'Write your introduction', color:'#d7a63b',
+    type:'essay',
+    intro:'"Before the Examiner will see you, show me you can open an essay properly. I\'ll set you a real exam-style question — you write the introduction. Name your case study, name your processes, and tell me exactly where the essay is going. No waffle."'
+  }
+};
+
+/* Season altar content (not a quiz — a toggle) */
+var SEASON_TEXT = {
+  summer:'SUMMER (Constructive Phase): high-pressure systems bring calm winds and gentle, spilling constructive waves (25,000–100,000 J/m³; heights under 1.5 m). Swash dominates backwash, building sand onshore from the offshore bar. This steepens the beach face to a 5°–10° gradient with a prominent berm.',
+  winter:'WINTER (Destructive Phase): intense low-pressure storms drive powerful, plunging destructive waves (over 400,000 J/m³; heights over 3–5 m). Backwash overpowers swash, stripping sand from the beach face and carrying it seaward into an offshore bar. This flattens the profile to a dissipative 1°–2.5° gradient — severe storms scarp the foredune itself.'
+};
+
+/* Boss essay target: which cards are relevant to "how interacting processes shaped the foredunes" */
+var BOSS_QUESTION = 'NZQA 2021, Geography 3.1: "Analyse how one natural process interacts with at least one other natural process to shape one or more features." The Examiner wants your case built on the Muriwai foredunes specifically. Every card below is genuine field data — but only three of them actually explain how the foredunes form. Choose exactly three.';
+var BOSS_RELEVANT = ['hydroSupply','aeolianTransport','vegetationStabilisation'];
+
+/* =========================================================
+   THE GRADE REAPER — a random, high-stakes roaming encounter.
+   Appears sometimes when you enter a zone, flashing red.
+   Get the question wrong and it wipes the whole expedition.
+========================================================= */
+var REAPER_ZONES = ['beach','otakamiro','maoribay','seasonshrine'];
+var REAPER_SPAWN_CHANCE = 0.25;
+var REAPER_QUESTIONS = [
+  {
+    q:'What causes constructive waves to build a beach berm in summer at Muriwai?',
+    options:[
+      'Swash is stronger than backwash, so sand is carried up the beach faster than it is dragged back',
+      'Backwash is stronger than swash, stripping sand offshore',
+      'Wind blows sand directly off the dunes onto the beach face',
+      'Rip currents deposit sand along the high-tide line'
+    ],
+    correct:0
+  },
+  {
+    q:'Why does longshore drift reverse direction and travel south near Otakamiro Point?',
+    options:[
+      'The prevailing wind always blows from the north at Muriwai',
+      'Wave refraction bends incoming swell around the headland, changing the angle of swash and backwash',
+      'The tide physically pulls sediment south twice a day',
+      'Southward-flowing rip currents drag the sand along the coast'
+    ],
+    correct:1
+  },
+  {
+    q:'What is "fetch", and why does it matter for wave energy at Muriwai?',
+    options:[
+      'The height of the largest wave ever recorded in a season',
+      'The depth of the water offshore, which slows wave speed',
+      'The uninterrupted distance wind blows over open water — a longer fetch builds larger, more energetic waves',
+      'The angle at which waves strike the shore'
+    ],
+    correct:2
+  },
+  {
+    q:'Which sequence correctly shows how Motutara Stack formed from the mainland headland?',
+    options:[
+      'Stack forms first, then erosion works backwards to create an arch, then a cave',
+      'A cave appears fully formed with no earlier stage',
+      'Arch → Cave → Stack → Cliff',
+      'Wave erosion widens a weakness into a cave, breaches it into an arch, then the arch roof collapses — leaving an isolated stack'
+    ],
+    correct:3
+  },
+  {
+    q:'Spinifex and pīngao grow across the Muriwai foredunes. What is their main geomorphological role?',
+    options:[
+      'Their roots and foliage trap wind-blown sand and bind it in place, letting the dune build higher',
+      'They release chemicals that harden loose sand into rock',
+      'They block sunlight so the sand cannot dry out and blow away',
+      'They have no real effect on the dune — they simply grow on top of it'
+    ],
+    correct:0
+  },
+  {
+    q:'Maori Bay is only 500 m from the main beach, yet far narrower. Why?',
+    options:[
+      'Maori Bay faces directly into the swell, which erodes sand faster than the main beach',
+      'Steep 30–70 m cliffs box the bay in, starving it of the sand supply and open exposure that build a wide beach further north',
+      'Maori Bay has much stronger tides than the main beach',
+      'The black sand at Maori Bay is heavier, so it sinks below the surface'
+    ],
+    correct:1
+  },
+  {
+    q:'A winter destructive wave and a summer constructive wave approach the same beach. Which is more likely to plunge rather than spill as it breaks?',
+    options:[
+      'The constructive wave — spilling waves are always higher energy',
+      'Neither — breaker type has nothing to do with wave energy',
+      'The destructive wave — its steeper, higher-energy swell curls over and collapses violently rather than spilling gently forward',
+      'Both break in exactly the same way regardless of energy'
+    ],
+    correct:2
+  },
+  {
+    q:"Salt-crystal weathering keeps the outer rampart of Muriwai's shore platform standing higher than the platform behind it. What's the mechanism?",
+    options:[
+      'The rampart is shaded from the sun and never dries out',
+      'The rampart is made of a different, harder type of rock entirely',
+      'Marine organisms cement the rampart together with shell material',
+      "Constant wave splash keeps the outer rampart wet, so salt crystals can't grow and pry it apart the way they do on the drier inner platform"
+    ],
+    correct:3
+  }
+];
+
+/* =========================================================
+   INTRODUCTION-WRITING TASK — real NZQA question archetypes,
+   built from the same typology as the actual exam papers
+========================================================= */
+var ESSAY_QUESTIONS = [
+  { tag:'2018-style', prompt:'Explain how two natural processes interact to shape the coastal environment at Muriwai. Then analyse how this interaction creates spatial variation between two locations in the study area.' },
+  { tag:'2021-style', prompt:'Analyse how one natural process interacts with at least one other natural process to shape one or more features at Muriwai.' },
+  { tag:'2024-style', prompt:'How do interacting natural processes create spatial OR temporal variation in the Muriwai coastal environment?' },
+  { tag:'2025-style', prompt:'Analyse how interacting natural processes shape a named feature at Muriwai. Refer to at least two interacting processes in your answer.' }
+];
+
+var ESSAY_PLAN = [
+  { part:'I. Introduction', focus:'Locate the environment precisely (Muriwai, 42 km west of Auckland). State your thesis — that it\'s a dynamic environment shaped by interacting marine, aeolian and biological processes, at different rates and scales. Define the concepts you\'ll use.' },
+  { part:'II. Body 1 — Spatial Variation', focus:'Explain how wave refraction around Otakamiro Point interacts with longshore drift to reverse it southwards — trapping sediment to make the southern beach ~200 m wide vs ~100 m in the north.' },
+  { part:'III. Body 2 — Temporal Variation', focus:'Contrast summer constructive waves (25,000–100,000 J/m³, steeper 5°–10° face with a berm) against winter destructive waves (>400,000 J/m³, flat 1°–2.5° dissipative profile).' },
+  { part:'IV. Body 3 — Interacting Processes', focus:'Explain how tectonic, marine and sub-aerial processes interact to form Motutara Stack — from 17 Ma volcanic rock, through Helensville Fault uplift, to wave refraction concentrating erosion into a cave, arch, then collapse.' },
+  { part:'V. Conclusion', focus:'Summarise without new content. Reinforce the thesis: Muriwai isn\'t shaped by isolated events, but by the continuous, systemic interaction of physical and biological processes across time and space.' }
+];
+var ESSAY_PLAN_TIP = 'Examiner\'s tip for Excellence: always refer directly to your own diagrams in the text — e.g. "as shown in Diagram 1, wave refraction bends the swell around Otakamiro..." An essay with diagrams that are never mentioned in the writing cannot reach Excellence.';
+
+var ESSAY_EXEMPLAR = {
+  citation:'Adapted from a genuine NZQA Geography 91426 (2016) exam script on the Muriwai Coastal Environment — real student writing, graded E7 (Low Excellence).',
+  paragraphs:[
+    { heading:'Longshore Drift × Saltation', text:'Longshore drift is the process by which sediment is transported along a beach by the action of waves. At South Muriwai Beach — an exposed, ~2.5 km stretch of open foreshore — longshore drift occurs frequently because wave trains arrive uninterrupted by obstacles. With a 2,000 km fetch and prevailing SW winds blowing onshore over half the time, waves approach at an oblique angle carrying real energy. As each wave breaks, swash carries sediment up the beach at that oblique angle, then gravity drags the backwash straight back down the slope — this repeated zig-zag is longshore drift. Longshore drift interacts directly with saltation: at low tide, the sediment longshore drift deposits on the beach face dries out in the sun, and once onshore winds exceed the fluid threshold, saltation bounces that same dry sediment further up the beach and into the dunes. One process\'s output becomes the next process\'s input — that\'s what "interacting processes" really means.' },
+    { heading:'Temporal Variation — Summer vs Winter', text:'Longshore drift itself varies with the seasons. In winter, low-pressure storms generate destructive waves with a weak swash — backwash dominates, so the beach loses more sediment than it gains, eroding a low, flat, dissipative profile. In summer, calmer high-pressure conditions bring constructive waves with a strong swash — swash dominates backwash, so the beach gains more sediment than it loses, building a steeper reflective profile out of loose, unconsolidated sand. The same process produces a completely different landform depending on the season — driven by the same interacting processes, just tipped in a different direction.' },
+    { heading:'Otakamiro Headland — 17 Million Years Ago vs Today', text:'Wave erosion at Otakamiro Headland shows the same kind of temporal variation on a much longer timescale. Around 17 million years ago, volcanic activity forced molten rock into fissures in older sedimentary rock, forming the resistant conglomerate that would one day become the headland. Uplift along the Helensville Fault eventually exposed that rock to the sea for the first time — and from that point, the dominant process reversed from construction to destruction. Today, wave refraction bends high-energy waves around the headland, concentrating their energy on its sides. That concentrated energy drives hydraulic action — waves compress air into cracks, then release it explosively as the wave retreats, shattering fragments loose — and those fragments are hurled back against the rock by every following wave in a sandpaper "corrosion" action. Cracks become notches, notches become caves, caves become arches, and the unsupported roof eventually collapses — exactly how Motutara Stack formed, and exactly what is still happening today at Fisherman\'s Rock.' }
+  ],
+  whyExcellence:[
+    'Only one side of the question was tackled (temporal, not spatial) — and named clearly from the first sentence.',
+    'Two time periods were named specifically — summer vs winter, and 17 million years ago vs today — not just "processes change over time" in the abstract.',
+    'Every process was explained as a sequence of steps, not just described in one sentence.',
+    'Interactions were spelled out explicitly: the output of one process became the input for the next.',
+    'Specific case-study evidence — real numbers, real place names — was used throughout, not just in one paragraph.',
+    'The answer was clearly planned: one variation was fully explained before moving on to the second, rather than jumping between them.'
+  ],
+  note:'Exact figures like fetch, sediment volumes and wind percentages can vary slightly between different NZQA resource booklets and years. What matters for your own essay is using your own case study\'s real numbers consistently — not memorising someone else\'s.'
+};
+
+var ESSAY_PROCESS_TERMS = ['wave refraction','longshore drift','longshore','aeolian','saltation','hydrological','biogeographical','climatological','marine erosion','erosion','deposition','wind transport','vegetation','wave energy','fetch','tidal','sediment transport','wave action'];
+var ESSAY_FEATURE_TERMS = ['foredune','dune','sea stack','cave','arch','stack','blowout','cliff','platform','beach profile','spit','headland','bay'];
+var ESSAY_THESIS_PHRASES = ['this essay will','this essay argues','will explain','will analyse','will discuss','will examine','will show','will demonstrate','interact to','interacting to','is the result of','are the result of','because of the interaction','due to the interaction'];
+
+function gradeEssayIntro(text){
+  var t = (text||'').toLowerCase();
+  var words = (text||'').trim().split(/\s+/).filter(Boolean);
+  var criteria = [];
+
+  criteria.push({
+    label:'Names Muriwai as the case study',
+    met: /muriwai/.test(t),
+    tip:'Say exactly where this essay is set — name the environment in your first sentence.'
+  });
+
+  var processHits = ESSAY_PROCESS_TERMS.filter(function(term){ return t.indexOf(term) !== -1; });
+  criteria.push({
+    label:'Names at least two specific processes',
+    met: processHits.length >= 2,
+    tip:'Name two real processes at work here — e.g. aeolian transport, longshore drift, wave refraction, hydrological supply.'
+  });
+
+  criteria.push({
+    label:'Names a specific landform or feature',
+    met: ESSAY_FEATURE_TERMS.some(function(term){ return t.indexOf(term) !== -1; }),
+    tip:'Tell the marker which feature you\'re explaining — a foredune, a sea stack, a wave-cut platform...'
+  });
+
+  criteria.push({
+    label:'States a clear line of argument',
+    met: ESSAY_THESIS_PHRASES.some(function(term){ return t.indexOf(term) !== -1; }),
+    tip:'Add a sentence that tells the marker where the essay is going — "This essay will explain how X and Y interact to..."'
+  });
+
+  criteria.push({
+    label:'Developed enough to be a real introduction ('+words.length+' words)',
+    met: words.length >= 35,
+    tip:'An introduction needs more than one line — aim for 35+ words that set up the whole essay.'
+  });
+
+  criteria.push({
+    label:'Grounds it with a specific number or statistic',
+    met: /\d/.test(text||''),
+    tip:'Excellence answers use real data, not just description — drop in a real figure (e.g. 250,000 m³, 5.47 m/s, 17 million years) even in the introduction.'
+  });
+
+  var score = criteria.filter(function(c){ return c.met; }).length;
+  var band = score>=6 ? 'Excellence' : score===5 ? 'Merit' : score>=3 ? 'Achieved' : 'Not Yet';
+  return { criteria:criteria, score:score, band:band };
+}
+
+/* =========================================================
+   GAME STATE
+========================================================= */
+var state = {
+  zone:'beach',
+  px:2, py:6, dir:'up',
+  xp:0,
+  cards:{},
+  solved:{},
+  unlocked:{},
+  season:'summer',
+  started:false,
+  preview:false,
+  visitedZones:{},
+  seasonToggled:false,
+  bossExcellence:false,
+  essayIntroText:'',
+  essayIntroScore:0
+};
+
+function xpToLevel(xp){ return 1 + Math.floor(xp/50); }
+function cardCount(){ var n=0; for(var k in state.cards){ if(state.cards[k]) n++; } return n; }
+
+var journalTab = 'data';
+
+/* =========================================================
+   NCEA 3.1 ESSAY CHECKLIST — the real exam requirement,
+   ticked off automatically by what the player has actually done
+========================================================= */
+var CHECKLIST_ITEMS = [
+  {
+    title:'Master Key Processes',
+    desc:'Confidently explain wave formation, wave refraction, wave erosion, longshore drift, aeolian transportation (saltation), and deposition (dune formation).',
+    how:'Collect the Hydrological Supply, Aeolian Transport, Longshore Drift & Cave–Arch–Stack cards',
+    done:function(){ return !!(state.cards.hydroSupply && state.cards.aeolianTransport && state.cards.longshoreDrift && state.cards.caveArchStack); }
+  },
+  {
+    title:'Understand Interactions',
+    desc:'Explain how natural processes work together (e.g., how wave refraction drives wave erosion).',
+    how:'Solve both sequence puzzles: the Dune Ecologist and the Cave Surveyor',
+    done:function(){ return !!(state.solved.duneEcologist && state.solved.caveSurveyor); }
+  },
+  {
+    title:'Link to Features',
+    desc:'Know exactly how these interacting processes create specific landforms, like sea stacks and foredunes.',
+    how:'Solve the Cave Surveyor (Motutara Island) and the Cliff-top Surveyor (Maori Bay)',
+    done:function(){ return !!(state.solved.caveSurveyor && state.solved.cliffSurveyor); }
+  },
+  {
+    title:'Visual Evidence',
+    desc:'Practice drawing and labelling at least two accurate maps or diagrams.',
+    how:'Witness the Time Rift (then vs. now) and pull the Season Altar lever (summer vs. winter)',
+    done:function(){ return !!(state.solved.timeRift && state.seasonToggled); }
+  },
+  {
+    title:'Memorise Specifics',
+    desc:'Learn the exact place names, statistics, and measurements for your chosen geographic environment.',
+    how:'Collect at least 8 of the 9 Field Data cards',
+    done:function(){ return cardCount() >= 8; }
+  },
+  {
+    title:'Apply Concepts',
+    desc:'Weave Key Geographic Concepts (like interacting processes or environments) throughout your writing.',
+    how:'Beat the Examiner — build your case from exactly the right 3 cards',
+    done:function(){ return !!state.bossExcellence; }
+  },
+  {
+    title:'Structure Your Essay',
+    desc:'Organise your facts into a strong academic structure with an introduction, focused body paragraphs, and a conclusion.',
+    how:'Find the Invigilator at the Examiner\'s Tower and write a real introduction — reach at least "Achieved" standard',
+    done:function(){ return (state.essayIntroScore||0) >= 3; }
+  }
+];
+
+function saveGame(){
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      zone:state.zone, px:state.px, py:state.py, dir:state.dir,
+      xp:state.xp, cards:state.cards, solved:state.solved,
+      unlocked:state.unlocked, season:state.season,
+      visitedZones:state.visitedZones, seasonToggled:state.seasonToggled,
+      bossExcellence:state.bossExcellence,
+      essayIntroText:state.essayIntroText, essayIntroScore:state.essayIntroScore
+    }));
+  }catch(e){}
+}
+function loadGame(){
+  try{
+    var raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){ return null; }
+}
+function clearSave(){
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+}
+
+/* =========================================================
+   CANVAS SETUP
+========================================================= */
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var animT = 0;
+var particles = [];
+
+function hash2(x,y){
+  var h = Math.sin(x*127.1 + y*311.7) * 43758.5453;
+  return h - Math.floor(h);
+}
+
+/* =========================================================
+   THEME COLORS PER ZONE
+========================================================= */
+var THEME_COLORS = {
+  beach:   { floor:'#332e28', floorFleck:'#6b6255', dune:'#78855a', duneDark:'#525c3c', wall:'#5c5044', wallDark:'#38312a', grass:'#8fa05f' },
+  headland:{ floor:'#332e28', floorFleck:'#6b6255', dune:'#6b6c52', duneDark:'#484a38', wall:'#5c5044', wallDark:'#2c261f', grass:'#7a7a54' },
+  cliff:   { floor:'#2b2723', floorFleck:'#544d43', dune:'#5a5a52', duneDark:'#3c3c36', wall:'#4a423a', wallDark:'#241f1a', grass:'#6a6a5c' },
+  shrine:  { floor:'#332e28', floorFleck:'#6b6255', dune:'#78855a', duneDark:'#525c3c', wall:'#5c5044', wallDark:'#38312a', grass:'#8fa05f' },
+  tower:   { floor:'#241f2c', floorFleck:'#4a3f5c', dune:'#3a3050', duneDark:'#241c38', wall:'#4a3f5c', wallDark:'#241c38', grass:'#5a4a78' }
+};
+
+function drawTile(px,py,ch,theme){
+  var t = THEME_COLORS[theme];
+  var x = px*TILE, y = py*TILE;
+  if(ch === 'C'){
+    ctx.fillStyle = t.wall;
+    ctx.fillRect(x,y,TILE,TILE);
+    ctx.fillStyle = t.wallDark;
+    var seed = hash2(px,py);
+    ctx.beginPath();
+    ctx.moveTo(x+4, y+TILE-2);
+    ctx.lineTo(x+TILE*0.4, y+TILE*0.3+seed*6);
+    ctx.lineTo(x+TILE*0.7, y+TILE-2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.05)';
+    ctx.fillRect(x+2,y+2,TILE-4,3);
+  } else if(ch === '~'){
+    var g = ctx.createLinearGradient(x,y,x,y+TILE);
+    g.addColorStop(0,'#3f6577'); g.addColorStop(1,'#1e3541');
+    ctx.fillStyle = g;
+    ctx.fillRect(x,y,TILE,TILE);
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.lineWidth = 1;
+    for(var i=0;i<2;i++){
+      var wy = y + 8 + i*12 + Math.sin(animT*0.05 + px*0.7 + i)*2;
+      ctx.beginPath();
+      ctx.moveTo(x, wy);
+      ctx.lineTo(x+TILE, wy - Math.cos(animT*0.05+px)*1.5);
+      ctx.stroke();
+    }
+  } else if(ch === 'D'){
+    ctx.fillStyle = t.floor;
+    ctx.fillRect(x,y,TILE,TILE);
+    ctx.fillStyle = t.dune;
+    ctx.beginPath();
+    ctx.ellipse(x+TILE/2, y+TILE*0.62, TILE*0.46, TILE*0.36, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = t.duneDark;
+    ctx.beginPath();
+    ctx.ellipse(x+TILE/2, y+TILE*0.7, TILE*0.3, TILE*0.16, 0, 0, Math.PI*2);
+    ctx.fill();
+  } else if(ch === 'G'){
+    ctx.fillStyle = t.floor;
+    ctx.fillRect(x,y,TILE,TILE);
+    ctx.strokeStyle = t.grass;
+    ctx.lineWidth = 2;
+    for(var gi=0; gi<3; gi++){
+      var gx = x + 6 + gi*8;
+      ctx.beginPath();
+      ctx.moveTo(gx, y+TILE-4);
+      ctx.lineTo(gx-2, y+TILE-16);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(gx+3, y+TILE-4);
+      ctx.lineTo(gx+5, y+TILE-14);
+      ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = t.floor;
+    ctx.fillRect(x,y,TILE,TILE);
+    var s2 = hash2(px+50,py+50);
+    ctx.fillStyle = t.floorFleck;
+    if(s2 > 0.55) ctx.fillRect(x+6+ (s2*10|0), y+8+((s2*17|0)%16), 2, 2);
+    if(s2 > 0.25) ctx.fillRect(x+18+((s2*13|0)%8), y+18+((s2*9|0)%8), 2, 2);
+  }
+}
+
+function drawBarrier(px,py){
+  var x = px*TILE, y = py*TILE;
+  ctx.fillStyle = '#453a2e';
+  ctx.beginPath();
+  ctx.moveTo(x+2,y+TILE-2);
+  ctx.lineTo(x+TILE*0.3,y+8);
+  ctx.lineTo(x+TILE*0.55,y+TILE-10);
+  ctx.lineTo(x+TILE*0.8,y+6);
+  ctx.lineTo(x+TILE-2,y+TILE-2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#2a2318';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawSpecial(px,py,id){
+  var x = px*TILE + TILE/2, y = py*TILE + TILE/2;
+  var pulse = REDUCED_MOTION ? 0 : Math.sin(animT*0.08)*3;
+  if(id === 'timeRift'){
+    var solved = state.solved['timeRift'];
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(Math.PI/4);
+    var grd = ctx.createLinearGradient(-14,-14,14,14);
+    if(solved){ grd.addColorStop(0,'#9c7fd6'); grd.addColorStop(1,'#5a3f8a'); }
+    else { grd.addColorStop(0,'#c9a3ff'); grd.addColorStop(1,'#5a3f8a'); }
+    ctx.fillStyle = grd;
+    ctx.fillRect(-11-pulse*0.4,-11-pulse*0.4,22+pulse*0.8,22+pulse*0.8);
+    ctx.strokeStyle = '#e6d8ff';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(-11-pulse*0.4,-11-pulse*0.4,22+pulse*0.8,22+pulse*0.8);
+    ctx.restore();
+  } else if(id === 'seasonAltar'){
+    ctx.fillStyle = '#3c4d50';
+    ctx.fillRect(x-10,y-4,20,16);
+    ctx.fillStyle = state.season === 'summer' ? '#d7a63b' : '#4fb3bf';
+    ctx.beginPath();
+    ctx.arc(x, y-10-Math.abs(pulse*0.5), 6, 0, Math.PI*2);
+    ctx.fill();
+    ctx.strokeStyle = '#16262a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x-10,y-4,20,16);
+  }
+}
+
+/* Exit tile: a clearly-marked doorway out of the zone. Dim + padlocked while
+   any barrier in the zone is still up; bright, glowing and arrowed once the
+   way is actually walkable, so it reads as "leave here" rather than scenery. */
+function drawExitTile(o, active){
+  var x = o.x*TILE, y = o.y*TILE, cx = x+TILE/2, cy = y+TILE/2;
+  var dx = o.exitDir==='left' ? -1 : o.exitDir==='right' ? 1 : 0;
+  var dy = o.exitDir==='up' ? -1 : o.exitDir==='down' ? 1 : 0;
+
+  // path surface — fully overpaints whatever cliff/water tile sits here
+  ctx.fillStyle = active ? '#2c4650' : '#1c2a2c';
+  ctx.fillRect(x,y,TILE,TILE);
+  ctx.fillStyle = active ? '#3f6472' : '#293b3d';
+  ctx.fillRect(x+3,y+3,TILE-6,TILE-6);
+
+  if(active){
+    var glow = REDUCED_MOTION ? 6 : 6+Math.sin(animT*0.1)*3;
+    var grd = ctx.createRadialGradient(cx,cy,2,cx,cy,TILE*0.9);
+    grd.addColorStop(0,'rgba(240,199,102,'+(0.5+glow*0.02)+')');
+    grd.addColorStop(1,'rgba(240,199,102,0)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(x-TILE*0.4,y-TILE*0.4,TILE*1.8,TILE*1.8);
+
+    // three chevrons marching outward in the exit direction
+    ctx.strokeStyle = '#f0c766';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    var phase = REDUCED_MOTION ? 0 : (animT*0.6) % 14;
+    for(var i=0;i<3;i++){
+      var off = -10 + i*10 + phase;
+      var ax = cx + dx*off, ay = cy + dy*off;
+      var perpX = dy, perpY = dx; // perpendicular unit for chevron wings
+      ctx.globalAlpha = Math.max(0.15, 1 - Math.abs(off)/16);
+      ctx.beginPath();
+      ctx.moveTo(ax - dx*5 + perpX*6, ay - dy*5 + perpY*6);
+      ctx.lineTo(ax + dx*5, ay + dy*5);
+      ctx.lineTo(ax - dx*5 - perpX*6, ay - dy*5 - perpY*6);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else {
+    // dim padlock: a path you can see, but can't use yet
+    ctx.strokeStyle = '#5c7a7e';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx-6,cy-2,12,10);
+    ctx.beginPath();
+    ctx.arc(cx,cy-3,5,Math.PI,0);
+    ctx.stroke();
+  }
+}
+
+function drawCharacter(px,py,color,hat,facing,bob,swing,ctxRef){
+  var c = ctxRef || ctx;
+  var x = px, y = py;
+  c.save();
+  c.translate(x,y);
+  var bobY = bob||0;
+  var sw = swing||0;
+  c.fillStyle = 'rgba(0,0,0,.35)';
+  c.beginPath();
+  c.ellipse(0, 12, 9, 3, 0, 0, Math.PI*2);
+  c.fill();
+  c.translate(0,bobY);
+  /* arms — drawn first so the torso overlaps their inner edge like shoulders;
+     a small opposite-phase offset gives a walking swing when sw is nonzero */
+  c.fillStyle = shadeColor(color,-20);
+  c.fillRect(-10, -5+sw, 4, 10);
+  c.fillRect(6, -5-sw, 4, 10);
+  c.fillStyle = color;
+  c.fillRect(-7,-6,14,14);
+  /* simple side-shading for a touch of dimensionality on the torso */
+  c.fillStyle = shadeColor(color,-22);
+  c.fillRect(-7,-6,3,14);
+  c.fillStyle = shadeColor(color,18);
+  c.fillRect(5,-6,2,14);
+  c.fillStyle = '#e9c9a0';
+  c.fillRect(-6,-16,12,11);
+  c.fillStyle = 'rgba(0,0,0,.13)';
+  c.fillRect(-6,-7,12,2);
+  c.fillStyle = '#241f18';
+  if(facing==='left'){ c.fillRect(-5,-12,2,2); }
+  else if(facing==='right'){ c.fillRect(3,-12,2,2); }
+  else { c.fillRect(-4,-12,2,2); c.fillRect(2,-12,2,2); }
+  c.fillStyle = shadeColor(color,-30);
+  if(hat==='brim'){ c.fillRect(-8,-18,16,3); c.fillRect(-3,-21,8,4); }
+  else if(hat==='leaf'){ c.beginPath(); c.moveTo(0,-22); c.lineTo(-5,-16); c.lineTo(5,-16); c.closePath(); c.fill(); }
+  else if(hat==='spike'){ for(var i=-1;i<=1;i++){ c.beginPath(); c.moveTo(i*5,-16); c.lineTo(i*5-2,-23); c.lineTo(i*5+2,-23); c.closePath(); c.fill(); } }
+  else if(hat==='clip'){ c.fillRect(6,-8,5,9); c.fillStyle='#efe3c6'; c.fillRect(7,-7,3,7); }
+  else if(hat==='hard'){ c.fillStyle='#c97a33'; c.beginPath(); c.arc(0,-17,7,Math.PI,0); c.fill(); c.fillRect(-7,-17,14,3);}
+  else if(hat==='binoc'){ c.fillStyle='#241f18'; c.fillRect(-6,-13,4,4); c.fillRect(2,-13,4,4); }
+  else if(hat==='wave'){ c.strokeStyle=shadeColor(color,40); c.lineWidth=2; c.beginPath(); c.moveTo(-6,-20); c.quadraticCurveTo(0,-24,6,-20); c.stroke(); }
+  else if(hat==='hivis'){ c.fillStyle='#e0a92e'; c.fillRect(-7,-3,14,3); }
+  else if(hat==='mortar'){ c.fillStyle='#241a2e'; c.fillRect(-9,-19,18,3); c.fillRect(-3,-23,6,5); c.fillStyle='#d7a63b'; c.fillRect(6,-19,1,8); }
+  else if(hat==='hood'){
+    c.fillStyle = '#140a10';
+    c.beginPath();
+    c.moveTo(-7,-16);
+    c.quadraticCurveTo(0,-27,7,-16);
+    c.lineTo(8,-2);
+    c.lineTo(4,-4);
+    c.lineTo(0,-2);
+    c.lineTo(-4,-4);
+    c.lineTo(-8,-2);
+    c.closePath();
+    c.fill();
+    c.fillStyle = '#ff3b30';
+    c.fillRect(-4,-13,2,2);
+    c.fillRect(2,-13,2,2);
+  }
+  c.restore();
+}
+function shadeColor(hex, amt){
+  var num = parseInt(hex.slice(1),16);
+  var r = Math.min(255,Math.max(0,(num>>16)+amt));
+  var g = Math.min(255,Math.max(0,((num>>8)&0xff)+amt));
+  var b = Math.min(255,Math.max(0,(num&0xff)+amt));
+  return 'rgb('+r+','+g+','+b+')';
+}
+
+function drawPlayer(px,py,dir,bob){
+  var swing = (moving && !REDUCED_MOTION) ? Math.sin(walkTimer*0.6)*3 : 0;
+  drawCharacter(px*TILE+TILE/2, py*TILE+TILE/2+8, '#d7a63b', 'pack', dir, bob, swing);
+}
+
+/* =========================================================
+   RENDER LOOP
+========================================================= */
+var walkBob = 0, walkTimer = 0, moving = false;
+
+function render(){
+  var zone = ZONES[state.zone];
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  for(var y=0;y<ROWS;y++){
+    for(var x=0;x<COLS;x++){
+      drawTile(x,y,zone.terrain[y][x],zone.theme);
+    }
+  }
+  var exitActive = isZoneExitActive(zone);
+  zone.objects.forEach(function(o){
+    if(o.kind==='exit') drawExitTile(o, exitActive);
+  });
+  zone.objects.forEach(function(o){
+    if(o.kind==='barrier' && !isUnlocked(zone,o)){
+      if(state.preview) ctx.globalAlpha = 0.35;
+      drawBarrier(o.x,o.y);
+      ctx.globalAlpha = 1;
+    }
+    if(o.kind==='special') drawSpecial(o.x,o.y,o.id);
+  });
+  zone.objects.forEach(function(o){
+    if(o.kind==='npc'){
+      if(o.isReaper){
+        var cx = o.x*TILE+TILE/2, cy = o.y*TILE+TILE/2+8;
+        var pulse = 0.5+0.5*Math.sin(animT*0.18);
+        var glowR = 16+pulse*7;
+        var grad = ctx.createRadialGradient(cx,cy,2,cx,cy,glowR);
+        grad.addColorStop(0,'rgba(220,40,30,'+(0.45+pulse*0.35).toFixed(2)+')');
+        grad.addColorStop(1,'rgba(220,40,30,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx,cy,glowR,0,Math.PI*2);
+        ctx.fill();
+        var reaperColor = pulse>0.55 ? '#e2493a' : '#5c1a16';
+        drawCharacter(cx, cy, reaperColor, 'hood', 'down', 0);
+        ctx.fillStyle = '#ff5a4a';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText('☠', o.x*TILE+TILE/2, o.y*TILE-2);
+        return;
+      }
+      var solvedFlag = state.solved[o.id];
+      var col = solvedFlag ? shadeColor(o.color,-10) : o.color;
+      drawCharacter(o.x*TILE+TILE/2, o.y*TILE+TILE/2+8, col, o.hat, 'down', 0);
+      if(!solvedFlag){
+        ctx.fillStyle = '#d7a63b';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText('!', o.x*TILE+TILE/2, o.y*TILE-2);
+      }
+    }
+  });
+
+  particles.forEach(function(p){
+    ctx.globalAlpha = Math.max(0,p.life/30);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x,p.y,3,3);
+    ctx.globalAlpha = 1;
+  });
+
+  drawPlayer(state.px, state.py, state.dir, walkBob);
+}
+
+function updateParticles(){
+  particles.forEach(function(p){ p.x+=p.vx; p.y+=p.vy; p.vy+=0.05; p.life--; });
+  particles = particles.filter(function(p){ return p.life>0; });
+}
+function burst(px,py,color){
+  for(var i=0;i<10;i++){
+    particles.push({
+      x:px*TILE+TILE/2, y:py*TILE+TILE/2,
+      vx:(Math.random()-0.5)*3, vy:(Math.random()-1.2)*2.4,
+      life:26+Math.random()*10, color:color
+    });
+  }
+}
+
+function loop(){
+  animT++;
+  if(moving){
+    walkTimer++;
+    walkBob = REDUCED_MOTION ? 0 : Math.sin(walkTimer*0.6)*2;
+  } else { walkBob = 0; }
+  updateParticles();
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* =========================================================
+   MOVEMENT / COLLISION
+========================================================= */
+function isUnlocked(zone, barrierObj){
+  if(state.unlocked[barrierObj.id]) return true;
+  var ok = barrierObj.requires.every(function(id){ return !!state.solved[id]; });
+  if(ok){ state.unlocked[barrierObj.id] = true; }
+  return ok;
+}
+
+function objectAt(zone,x,y){
+  for(var i=0;i<zone.objects.length;i++){
+    var o = zone.objects[i];
+    if(o.x===x && o.y===y) return o;
+  }
+  return null;
+}
+
+function isBlocked(zone,x,y){
+  if(x<0||x>=COLS||y<0||y>=ROWS) return true;
+  var o = objectAt(zone,x,y);
+  if(o){
+    if(o.kind==='npc') return true;
+    if(o.kind==='barrier') return state.preview ? false : !isUnlocked(zone,o);
+    if(o.kind==='exit') return false;
+    if(o.kind==='special') return true;
+  }
+  var ch = zone.terrain[y][x];
+  if(ch==='C' || ch==='~') return true;
+  return false;
+}
+
+var moveCooldown = 0;
+function tryMove(dx,dy,dir){
+  state.dir = dir;
+  var zone = ZONES[state.zone];
+  var nx = state.px+dx, ny = state.py+dy;
+  if(isBlocked(zone,nx,ny)){ moving=false; return; }
+  state.px = nx; state.py = ny;
+  moving = true;
+  var o = objectAt(zone,nx,ny);
+  if(o && o.kind==='exit'){
+    goToZone(o.to, o.entry);
+  }
+  saveGame();
+}
+
+function findOpenTile(zone){
+  var tries = 40;
+  while(tries-- > 0){
+    var x = 1+Math.floor(Math.random()*(COLS-2));
+    var y = 1+Math.floor(Math.random()*(ROWS-2));
+    var ch = zone.terrain[y] && zone.terrain[y][x];
+    if((ch==='.'||ch==='D'||ch==='G') && !objectAt(zone,x,y)) return {x:x,y:y};
+  }
+  return null;
+}
+
+function removeReaperFromZones(){
+  // A reaper the player has already confronted (walked away from, mid-question)
+  // stays put with its question until it's actually resolved — only an
+  // un-confronted one gets cleared out and re-rolled on zone entry.
+  REAPER_ZONES.forEach(function(zid){
+    var z = ZONES[zid];
+    z.objects = z.objects.filter(function(o){ return !o.isReaper || o.encountered; });
+  });
+}
+
+function hasPendingReaper(){
+  return REAPER_ZONES.some(function(zid){
+    return ZONES[zid].objects.some(function(o){ return o.isReaper && o.encountered; });
+  });
+}
+
+function maybeSpawnReaper(zone){
+  removeReaperFromZones();
+  if(state.preview) return;
+  if(REAPER_ZONES.indexOf(zone.id) === -1) return;
+  if(hasPendingReaper()) return; // don't pile a second one on top of an unresolved encounter
+  if(Math.random() >= REAPER_SPAWN_CHANCE) return;
+  var tile = findOpenTile(zone);
+  if(!tile) return;
+  zone.objects.push({kind:'npc', id:'gradeReaper', x:tile.x, y:tile.y, hat:'hood', color:'#8a1f1f', isReaper:true, encountered:false});
+}
+
+function goToZone(zoneId, entry){
+  state.zone = zoneId;
+  state.px = entry.x; state.py = entry.y; state.dir = entry.dir;
+  state.visitedZones[zoneId] = true;
+  var zone = ZONES[zoneId];
+  document.getElementById('zone-name').textContent = zone.name;
+  document.getElementById('zone-desc').textContent = zone.desc;
+  showToast(zone.name);
+  maybeSpawnReaper(zone);
+  updateMapTrack();
+  refreshJournal();
+  saveGame();
+}
+
+/* =========================================================
+   INTERACTION
+========================================================= */
+function facingCoord(){
+  var dx=0,dy=0;
+  if(state.dir==='up') dy=-1; else if(state.dir==='down') dy=1;
+  else if(state.dir==='left') dx=-1; else dx=1;
+  return {x:state.px+dx, y:state.py+dy};
+}
+
+function interact(){
+  var zone = ZONES[state.zone];
+  var f = facingCoord();
+  var o = objectAt(zone,f.x,f.y);
+  if(!o) return;
+  if(o.kind==='npc'){
+    if(o.id==='examiner') openBoss();
+    else if(o.id==='examinerClerk') openEssay();
+    else if(o.isReaper) openReaperEncounter(o);
+    else openNpcDialogue(o.id);
+  } else if(o.kind==='special'){
+    if(o.id==='seasonAltar') openSeasonAltar();
+    else if(o.id==='timeRift') openTimeRift();
+  } else if(o.kind==='barrier' && !isUnlocked(zone,o)){
+    showToast('Blocked — answer everyone in this area first.');
+  }
+}
+
+/* ---------- Generic NPC dialogue (mcq / order) ---------- */
+var dlgState = {};
+var elOverlay = document.getElementById('overlay-dlg');
+var elBadge = document.getElementById('dlg-badge');
+var elName = document.getElementById('dlg-name');
+var elRole = document.getElementById('dlg-role');
+var elBody = document.getElementById('dlg-body');
+var elFoot = document.getElementById('dlg-foot');
+
+function openNpcDialogue(npcId){
+  var npc = NPCS[npcId];
+  dlgState = { npcId:npcId, phase: npc.isSpecial ? 'scene' : (state.solved[npcId] ? 'done' : 'intro'), sceneIdx:0, order:[] };
+  elBadge.style.background = npc.color;
+  elName.textContent = npc.name.toUpperCase();
+  elRole.textContent = npc.role;
+  elOverlay.hidden = false;
+  renderDialogue();
+}
+function openTimeRift(){ openNpcDialogue('timeRift'); }
+
+function closeDialogue(){ elOverlay.hidden = true; saveGame(); }
+
+function renderDialogue(){
+  var npc = NPCS[dlgState.npcId];
+  elBody.innerHTML = '';
+  elFoot.innerHTML = '';
+
+  if(state.solved[dlgState.npcId] && dlgState.phase!=='justSolved'){
+    var p = document.createElement('p');
+    p.textContent = '"Already told you everything I know — check your journal."';
+    elBody.appendChild(p);
+    var btn = mkBtn('Close', closeDialogue, 'btn');
+    elFoot.appendChild(btn);
+    return;
+  }
+
+  if(npc.isSpecial && dlgState.phase==='scene'){
+    var beat = npc.beats[dlgState.sceneIdx];
+    var sp = document.createElement('p');
+    sp.textContent = beat.text;
+    elBody.appendChild(sp);
+    var nextBtn = mkBtn(dlgState.sceneIdx < npc.beats.length-1 ? 'Continue' : 'Continue', function(){
+      dlgState.sceneIdx++;
+      if(dlgState.sceneIdx >= npc.beats.length){ dlgState.phase = npc.type; }
+      renderDialogue();
+    }, 'btn');
+    elFoot.appendChild(nextBtn);
+    return;
+  }
+
+  if(dlgState.phase==='intro'){
+    var ip = document.createElement('p');
+    ip.textContent = npc.intro;
+    elBody.appendChild(ip);
+    var startBtn = mkBtn('Ask about it', function(){
+      dlgState.phase = npc.type;
+      renderDialogue();
+    }, 'btn');
+    elFoot.appendChild(startBtn);
+    return;
+  }
+
+  if(dlgState.phase==='mcq'){
+    renderMcq(npc);
+    return;
+  }
+  if(dlgState.phase==='order'){
+    renderOrder(npc);
+    return;
+  }
+}
+
+function renderMcq(npc){
+  var qp = document.createElement('p');
+  qp.textContent = npc.question;
+  elBody.appendChild(qp);
+  var list = document.createElement('div');
+  list.className = 'opt-list';
+  npc.options.forEach(function(opt, idx){
+    var b = document.createElement('button');
+    b.className = 'opt-btn';
+    b.textContent = opt;
+    b.addEventListener('click', function(){
+      var buttons = list.querySelectorAll('.opt-btn');
+      buttons.forEach(function(x){ x.disabled = true; });
+      if(idx === npc.correct){
+        b.classList.add('correct');
+        onNpcSuccess(npc);
+      } else {
+        b.classList.add('wrong');
+        showFeedback(npc.failText, true);
+        setTimeout(function(){ buttons.forEach(function(x){ x.disabled=false; x.classList.remove('wrong'); }); }, 900);
+      }
+    });
+    list.appendChild(b);
+  });
+  elBody.appendChild(list);
+  var fb = document.createElement('div');
+  fb.id = 'dlg-feedback';
+  elBody.appendChild(fb);
+}
+
+function showFeedback(text, bad){
+  var fb = document.getElementById('dlg-feedback');
+  if(!fb) return;
+  fb.innerHTML = '';
+  var d = document.createElement('div');
+  d.className = 'feedback' + (bad ? ' bad' : '');
+  d.textContent = text;
+  fb.appendChild(d);
+}
+
+function renderOrder(npc){
+  var pp = document.createElement('p');
+  pp.textContent = npc.prompt;
+  elBody.appendChild(pp);
+
+  if(!dlgState.pool){
+    dlgState.pool = npc.items.slice().sort(function(){ return Math.random()-0.5; });
+    dlgState.order = [];
+  }
+
+  var seq = document.createElement('div');
+  seq.className = 'order-seq';
+  if(dlgState.order.length===0){
+    var ph = document.createElement('div');
+    ph.style.cssText='font-size:11px;color:var(--text-mute);';
+    ph.textContent = 'Click steps below to build the sequence here.';
+    seq.appendChild(ph);
+  }
+  dlgState.order.forEach(function(item,i){
+    var c = document.createElement('div');
+    c.className = 'chip';
+    c.innerHTML = '<span class="seq-num">'+(i+1)+'.</span>'+item;
+    c.addEventListener('click', function(){
+      dlgState.order.splice(i,1);
+      dlgState.pool.push(item);
+      renderDialogue();
+    });
+    seq.appendChild(c);
+  });
+  elBody.appendChild(seq);
+
+  var pool = document.createElement('div');
+  pool.className = 'order-pool';
+  dlgState.pool.forEach(function(item){
+    var c = document.createElement('div');
+    c.className = 'chip';
+    c.textContent = item;
+    c.addEventListener('click', function(){
+      dlgState.pool.splice(dlgState.pool.indexOf(item),1);
+      dlgState.order.push(item);
+      renderDialogue();
+    });
+    pool.appendChild(c);
+  });
+  elBody.appendChild(pool);
+
+  var fb = document.createElement('div');
+  fb.id = 'dlg-feedback';
+  elBody.appendChild(fb);
+
+  var checkBtn = mkBtn('Check Sequence', function(){
+    var correct = npc.items;
+    var ok = dlgState.order.length===correct.length && dlgState.order.every(function(v,i){ return v===correct[i]; });
+    if(ok){ onNpcSuccess(npc); }
+    else {
+      showFeedback(npc.failText, true);
+    }
+  }, 'btn');
+  checkBtn.disabled = dlgState.order.length !== npc.items.length;
+  elFoot.appendChild(checkBtn);
+
+  var resetBtn = mkBtn('Reset', function(){
+    dlgState.pool = npc.items.slice().sort(function(){ return Math.random()-0.5; });
+    dlgState.order = [];
+    renderDialogue();
+  }, 'btn ghost');
+  elFoot.appendChild(resetBtn);
+}
+
+function onNpcSuccess(npc){
+  state.solved[dlgState.npcId] = true;
+  state.xp += npc.xp;
+  if(npc.card) state.cards[npc.card] = true;
+  saveGame();
+  updateHud();
+  refreshJournal();
+  var zone = ZONES[state.zone];
+  burst(state.px, state.py, '#d7a63b');
+  announceNewlyUnlockedBarriers(zone);
+
+  dlgState.phase = 'justSolved';
+  elBody.innerHTML='';
+  elFoot.innerHTML='';
+  var sp = document.createElement('p');
+  sp.textContent = npc.successText;
+  elBody.appendChild(sp);
+  var reward = document.createElement('div');
+  reward.className='feedback';
+  reward.textContent = '+ '+npc.xp+' XP' + (npc.card ? '  •  Field data added: '+CARDS[npc.card].title : '');
+  elBody.appendChild(reward);
+  var closeBtn = mkBtn('Close', closeDialogue, 'btn');
+  elFoot.appendChild(closeBtn);
+}
+function announceNewlyUnlockedBarriers(zone){
+  zone.objects.forEach(function(o){
+    if(o.kind !== 'barrier') return;
+    if(state.unlocked[o.id]) return;
+    var ready = o.requires.every(function(id){ return !!state.solved[id]; });
+    if(!ready) return;
+    state.unlocked[o.id] = true;
+    saveGame();
+    burst(o.x, o.y, '#d7a63b');
+    var exitObj = zone.objects.filter(function(x){ return x.kind==='exit'; })[0];
+    if(exitObj) burst(exitObj.x, exitObj.y, '#f0c766');
+    showToast('The path ahead is clear — follow the glowing arrow →');
+  });
+}
+
+function isZoneExitActive(zone){
+  if(state.preview) return true;
+  var barriers = zone.objects.filter(function(o){ return o.kind==='barrier'; });
+  return barriers.every(function(b){ return !!state.unlocked[b.id]; });
+}
+
+function mkBtn(label, fn, cls){
+  var b = document.createElement('button');
+  b.className = cls || 'btn';
+  b.textContent = label;
+  b.addEventListener('click', fn);
+  return b;
+}
+
+/* ---------- Season altar ---------- */
+function openSeasonAltar(){
+  elBadge.style.background = '#4fb3bf';
+  elName.textContent = 'PROFILE MUPA ALTAR';
+  elRole.textContent = 'Seasonal beach profiling';
+  elOverlay.hidden = false;
+  renderAltar();
+}
+function renderAltar(){
+  elBody.innerHTML=''; elFoot.innerHTML='';
+  var p = document.createElement('p');
+  p.textContent = SEASON_TEXT[state.season];
+  elBody.appendChild(p);
+  var note = document.createElement('p');
+  note.className='dlg-note';
+  note.textContent = 'Pull the lever to flip the season and compare the profile. Then find the Council Surveyor nearby.';
+  elBody.appendChild(note);
+  var toggleBtn = mkBtn('Pull the Lever → Switch to ' + (state.season==='summer' ? 'Winter' : 'Summer'), function(){
+    state.season = state.season==='summer' ? 'winter' : 'summer';
+    state.seasonToggled = true;
+    saveGame();
+    refreshJournal();
+    renderAltar();
+  }, 'btn');
+  elFoot.appendChild(toggleBtn);
+  var closeBtn = mkBtn('Close', closeDialogue, 'btn ghost');
+  elFoot.appendChild(closeBtn);
+}
+
+/* ---------- Boss ---------- */
+var bossSelected = {};
+var bossAttempts = 0;
+var bossJudged = false;
+var CARD_CLUES = {
+  hydroSupply: 'the water that first brings the sand onto the beach',
+  aeolianTransport: 'the wind that carries dry sand up into a dune',
+  vegetationStabilisation: 'the plant that finally pins the sand down'
+};
+function openBoss(){
+  elBadge.style.background = NPCS.examiner.color;
+  elName.textContent = 'THE EXAMINER';
+  elRole.textContent = 'Standard 91426';
+  elOverlay.hidden = false;
+  bossSelected = {};
+  bossAttempts = 0;
+  bossJudged = false;
+  renderBoss();
+}
+function bossSelectedIds(){ return Object.keys(bossSelected).filter(function(k){ return bossSelected[k]; }); }
+
+function renderBoss(){
+  elBody.innerHTML=''; elFoot.innerHTML='';
+  if(cardCount() < 3 && !state.preview){
+    var warn = document.createElement('p');
+    warn.textContent = '"You haven’t gathered enough field data yet. Go back and finish the coastline — come back when you’re ready."';
+    elBody.appendChild(warn);
+    elFoot.appendChild(mkBtn('Close', closeDialogue, 'btn'));
+    return;
+  }
+  var qp = document.createElement('p');
+  qp.textContent = BOSS_QUESTION;
+  elBody.appendChild(qp);
+  var capNote = document.createElement('p');
+  capNote.className = 'dlg-note';
+  var n = bossSelectedIds().length;
+  capNote.textContent = 'Carrying '+n+'/3 pieces of evidence. Choose exactly three — precision counts as much as coverage.';
+  elBody.appendChild(capNote);
+
+  var grid = document.createElement('div');
+  grid.className = 'card-pick';
+  CARD_ORDER.forEach(function(id){
+    if(!state.cards[id] && !state.preview) return;
+    var selected = !!bossSelected[id];
+    var cls = 'pick-card' + (selected ? ' selected' : '');
+    if(bossJudged && selected){
+      cls += BOSS_RELEVANT.indexOf(id) !== -1 ? ' correct' : ' wrong';
+    }
+    var c = document.createElement('div');
+    c.className = cls;
+    c.innerHTML = '<b>'+CARDS[id].title+'</b>'+CARDS[id].facts[0];
+    c.addEventListener('click', function(){
+      bossJudged = false;
+      if(!bossSelected[id] && bossSelectedIds().length >= 3){
+        showFeedback('You’re already carrying three pieces of evidence — deselect one before adding another.', true);
+        return;
+      }
+      bossSelected[id] = !bossSelected[id];
+      renderBoss();
+    });
+    grid.appendChild(c);
+  });
+  elBody.appendChild(grid);
+
+  var fb = document.createElement('div');
+  fb.id='dlg-feedback';
+  elBody.appendChild(fb);
+
+  var submitBtn = mkBtn('Submit Essay Case', function(){
+    var selectedIds = bossSelectedIds();
+    bossAttempts++;
+    bossJudged = true;
+    var correctPicked = selectedIds.filter(function(id){ return BOSS_RELEVANT.indexOf(id) !== -1; });
+    var wrongPicked = selectedIds.filter(function(id){ return BOSS_RELEVANT.indexOf(id) === -1; });
+    var missing = BOSS_RELEVANT.filter(function(id){ return selectedIds.indexOf(id) === -1; });
+
+    if(wrongPicked.length===0 && missing.length===0){
+      showEnding('Excellence');
+      return;
+    }
+    var grade = correctPicked.length>=2 ? 'Merit' : (correctPicked.length>=1 ? 'Achieved' : 'Not Yet');
+    var parts = ['Grade so far: '+grade+'.'];
+    if(wrongPicked.length){
+      parts.push((wrongPicked.length>1 ? 'A couple of these are' : 'One of these is')+' solid field data — just not about how the foredunes actually form. Look again at what each card is really describing.');
+    }
+    if(missing.length){
+      var clues = missing.map(function(id){ return CARD_CLUES[id]; });
+      parts.push('Your case is still missing something about '+clues.join(', and about ')+'.');
+    }
+    parts.push('(Attempt '+bossAttempts+' — the highlighted cards above show which of your three are pulling their weight.)');
+    renderBoss();
+    showFeedback(parts.join(' '), true);
+  }, 'btn');
+  submitBtn.disabled = n !== 3;
+  elFoot.appendChild(submitBtn);
+  elFoot.appendChild(mkBtn('Close', closeDialogue, 'btn ghost'));
+}
+
+function showEnding(grade){
+  state.bossExcellence = true;
+  saveGame();
+  refreshJournal();
+  elBody.innerHTML=''; elFoot.innerHTML='';
+  var banner = document.createElement('div');
+  banner.className = 'grade-banner';
+  banner.innerHTML = '<div class="grade">ACHIEVED WITH '+grade.toUpperCase()+'</div><div class="sub">"That’s the interaction — hydrological supply, climatological transport, biogeographical stabilisation. Concepts, data, and the causal links between them. That’s an Excellence answer."</div>';
+  elBody.appendChild(banner);
+  var summary = document.createElement('p');
+  summary.textContent = 'Field data collected: '+cardCount()+'/9 — Total XP: '+state.xp+' — Rank: Lv '+xpToLevel(state.xp)+'.';
+  elBody.appendChild(summary);
+  elFoot.appendChild(mkBtn('Keep Exploring', closeDialogue, 'btn ghost'));
+  elFoot.appendChild(mkBtn('New Expedition', function(){ closeDialogue(); confirmReset(); }, 'btn'));
+}
+
+/* =========================================================
+   THE GRADE REAPER — random high-stakes encounter
+========================================================= */
+var reaperState = { question:null, obj:null };
+
+function openReaperEncounter(obj){
+  obj.encountered = true; // pin this exact reaper + question until it's resolved
+  if(!obj.question){
+    obj.question = REAPER_QUESTIONS[Math.floor(Math.random()*REAPER_QUESTIONS.length)];
+  }
+  reaperState.question = obj.question;
+  reaperState.obj = obj;
+  elBadge.style.background = '#8a1f1f';
+  elName.textContent = 'THE GRADE REAPER';
+  elRole.textContent = '"Not Achieved" awaits';
+  elOverlay.hidden = false;
+  renderReaperEncounter();
+}
+
+function renderReaperEncounter(){
+  elBody.innerHTML=''; elFoot.innerHTML='';
+  var warn = document.createElement('p');
+  warn.textContent = '"So — you think you\'re ready for Excellence?" The Grade Reaper looms, its red robes flickering like a marking pen still wet with ink. "One question. Answer wrong, and I strike a line through this entire expedition — every card, every point, gone. Answer right, and you walk away with more than you came with."';
+  elBody.appendChild(warn);
+  var qp = document.createElement('p');
+  qp.style.cssText = 'font-weight:700;margin-top:10px;';
+  qp.textContent = reaperState.question.q;
+  elBody.appendChild(qp);
+
+  var list = document.createElement('div');
+  list.className = 'opt-list';
+  reaperState.question.options.forEach(function(opt,i){
+    var b = mkBtn(opt, function(){ onReaperAnswer(i); }, 'opt-btn');
+    list.appendChild(b);
+  });
+  elBody.appendChild(list);
+
+  var fb = document.createElement('div');
+  fb.id = 'dlg-feedback';
+  elBody.appendChild(fb);
+
+  elFoot.appendChild(mkBtn('Walk Away', function(){
+    showToast('The Grade Reaper lets you go — for now. He\'ll be waiting with the same question.');
+    closeDialogue();
+  }, 'btn ghost'));
+}
+
+function onReaperAnswer(i){
+  var opts = elBody.querySelectorAll('.opt-btn');
+  opts.forEach(function(b){ b.disabled = true; });
+  if(i === reaperState.question.correct){
+    opts[i].classList.add('correct');
+    onReaperSuccess();
+  } else {
+    opts[i].classList.add('wrong');
+    opts[reaperState.question.correct].classList.add('correct');
+    showFeedback("Wrong. The Grade Reaper doesn't give second chances.", true);
+    setTimeout(onReaperFailure, 1400);
+  }
+}
+
+function onReaperSuccess(){
+  state.xp += 40;
+  if(reaperState.obj){
+    var zone = ZONES[state.zone];
+    zone.objects = zone.objects.filter(function(o){ return o !== reaperState.obj; });
+  }
+  saveGame();
+  updateHud();
+  renderReaperResult(true);
+}
+
+function onReaperFailure(){
+  renderReaperResult(false);
+}
+
+function renderReaperResult(won){
+  elBody.innerHTML=''; elFoot.innerHTML='';
+  var banner = document.createElement('div');
+  banner.className = 'grade-banner' + (won ? '' : ' fail');
+  if(won){
+    banner.innerHTML = '<div class="grade">SPARED</div><div class="sub">The Grade Reaper dissolves back into the dunes. "...Correct. Not that it matters — I\'ll be back." (+40 XP)</div>';
+  } else {
+    banner.innerHTML = '<div class="grade">NOT ACHIEVED</div><div class="sub">The Grade Reaper draws one long red line through your expedition. Every card, every point of progress — struck out. Time to start again.</div>';
+  }
+  elBody.appendChild(banner);
+  if(won){
+    elFoot.appendChild(mkBtn('Keep Exploring', closeDialogue, 'btn'));
+  } else {
+    elFoot.appendChild(mkBtn('Begin a New Expedition', function(){
+      clearSave();
+      window.location.reload();
+    }, 'btn'));
+  }
+}
+
+/* =========================================================
+   INTRODUCTION-WRITING TASK (The Invigilator)
+========================================================= */
+var essayState = { question:null, lastResult:null, showPlan:false, showExemplar:false };
+
+function openEssay(){
+  var npc = NPCS.examinerClerk;
+  elBadge.style.background = npc.color;
+  elName.textContent = npc.name.toUpperCase();
+  elRole.textContent = npc.role;
+  elOverlay.hidden = false;
+  if(!essayState.question){
+    essayState.question = ESSAY_QUESTIONS[Math.floor(Math.random()*ESSAY_QUESTIONS.length)];
+  }
+  essayState.lastResult = null;
+  essayState.showPlan = false;
+  essayState.showExemplar = false;
+  renderEssay();
+}
+
+function renderEssayPlan(){
+  elBody.innerHTML=''; elFoot.innerHTML='';
+  var ip = document.createElement('p');
+  ip.textContent = '"Here\'s the shape every high-scoring essay follows. Yours doesn\'t have to match it exactly — but it has to have a shape."';
+  elBody.appendChild(ip);
+  ESSAY_PLAN.forEach(function(step){
+    var d = document.createElement('div');
+    d.className = 'essay-crit';
+    d.innerHTML = '<div><span class="lbl" style="font-weight:bold;">'+step.part+'</span><span class="crit-tip" style="display:block;">'+step.focus+'</span></div>';
+    elBody.appendChild(d);
+  });
+  var tip = document.createElement('p');
+  tip.className = 'dlg-note';
+  tip.textContent = ESSAY_PLAN_TIP;
+  elBody.appendChild(tip);
+  elFoot.appendChild(mkBtn('Back to Writing', function(){ essayState.showPlan = false; renderEssay(); }, 'btn'));
+  elFoot.appendChild(mkBtn('Close', closeDialogue, 'btn ghost'));
+}
+
+function renderEssayExemplar(){
+  elBody.innerHTML=''; elFoot.innerHTML='';
+  var cite = document.createElement('p');
+  cite.className = 'dlg-note';
+  cite.textContent = ESSAY_EXEMPLAR.citation;
+  elBody.appendChild(cite);
+  ESSAY_EXEMPLAR.paragraphs.forEach(function(para){
+    var h = document.createElement('p');
+    h.innerHTML = '<b>'+para.heading+'</b>';
+    elBody.appendChild(h);
+    var t = document.createElement('p');
+    t.textContent = para.text;
+    elBody.appendChild(t);
+  });
+  var whyHead = document.createElement('div');
+  whyHead.className = 'essay-grade';
+  whyHead.textContent = 'Why this earned Excellence';
+  elBody.appendChild(whyHead);
+  ESSAY_EXEMPLAR.whyExcellence.forEach(function(reason){
+    var d = document.createElement('div');
+    d.className = 'essay-crit met';
+    d.innerHTML = '<div class="box">✓</div><div><span class="lbl">'+reason+'</span></div>';
+    elBody.appendChild(d);
+  });
+  var note = document.createElement('p');
+  note.className = 'dlg-note';
+  note.textContent = ESSAY_EXEMPLAR.note;
+  elBody.appendChild(note);
+  elFoot.appendChild(mkBtn('Back to Writing', function(){ essayState.showExemplar = false; renderEssay(); }, 'btn'));
+  elFoot.appendChild(mkBtn('Close', closeDialogue, 'btn ghost'));
+}
+
+function renderEssay(){
+  if(essayState.showPlan){ renderEssayPlan(); return; }
+  if(essayState.showExemplar){ renderEssayExemplar(); return; }
+  elBody.innerHTML=''; elFoot.innerHTML='';
+
+  var ip = document.createElement('p');
+  ip.textContent = NPCS.examinerClerk.intro;
+  elBody.appendChild(ip);
+
+  var qp = document.createElement('p');
+  qp.innerHTML = '<b>Exam question ('+essayState.question.tag+'):</b> '+essayState.question.prompt;
+  elBody.appendChild(qp);
+
+  var ta = document.createElement('textarea');
+  ta.className = 'essay-textarea';
+  ta.placeholder = 'Write your introduction here — set the scene, name your processes and features, and state where your essay is going...';
+  ta.value = state.essayIntroText || '';
+  ta.addEventListener('input', function(){ state.essayIntroText = ta.value; });
+  elBody.appendChild(ta);
+
+  var wc = document.createElement('div');
+  wc.className = 'essay-wordcount';
+  function updateWc(){
+    var n = ta.value.trim().split(/\s+/).filter(Boolean).length;
+    wc.textContent = n+' words';
+  }
+  ta.addEventListener('input', updateWc);
+  updateWc();
+  elBody.appendChild(wc);
+
+  if(essayState.lastResult){
+    var res = essayState.lastResult;
+    var grade = document.createElement('div');
+    grade.className = 'essay-grade';
+    grade.textContent = 'Grade so far: '+res.band;
+    elBody.appendChild(grade);
+    res.criteria.forEach(function(c){
+      var d = document.createElement('div');
+      d.className = 'essay-crit' + (c.met ? ' met' : '');
+      d.innerHTML = '<div class="box">'+(c.met?'✓':'')+'</div><div><span class="lbl">'+c.label+'</span><span class="crit-tip">'+c.tip+'</span></div>';
+      elBody.appendChild(d);
+    });
+  }
+
+  var fb = document.createElement('div');
+  fb.id = 'dlg-feedback';
+  elBody.appendChild(fb);
+
+  var submitBtn = mkBtn(essayState.lastResult ? 'Re-mark My Introduction' : 'Submit Introduction', function(){
+    var result = gradeEssayIntro(state.essayIntroText);
+    essayState.lastResult = result;
+    if(result.score > (state.essayIntroScore||0)){
+      state.essayIntroScore = result.score;
+    }
+    if(result.score >= 3 && !state.solved.examinerClerk){
+      state.solved.examinerClerk = true;
+      state.xp += 20;
+    }
+    saveGame();
+    updateHud();
+    refreshJournal();
+    renderEssay();
+    if(result.band === 'Excellence'){
+      showFeedback('"Now that\'s how you open a Level 3 essay. Concepts, data, direction — all there." Go show the Examiner what you\'ve got.', false);
+    } else if(result.band === 'Not Yet'){
+      showFeedback('"Not yet — an introduction has to earn its place. Look at what\'s still unchecked below and try again."', true);
+    } else {
+      showFeedback('"Getting there — tighten it up against the checklist below and have another go."', true);
+    }
+  }, 'btn');
+  submitBtn.id = 'essay-submit-btn';
+  elFoot.appendChild(submitBtn);
+
+  elFoot.appendChild(mkBtn('New Question', function(){
+    essayState.question = ESSAY_QUESTIONS[Math.floor(Math.random()*ESSAY_QUESTIONS.length)];
+    essayState.lastResult = null;
+    renderEssay();
+  }, 'btn ghost'));
+
+  elFoot.appendChild(mkBtn('Show Essay Plan', function(){
+    essayState.showPlan = true;
+    renderEssay();
+  }, 'btn ghost'));
+
+  elFoot.appendChild(mkBtn('Read a Real Excellence Answer', function(){
+    essayState.showExemplar = true;
+    renderEssay();
+  }, 'btn ghost'));
+
+  elFoot.appendChild(mkBtn('Close', closeDialogue, 'btn ghost'));
+}
+
+/* =========================================================
+   HUD / JOURNAL / MAP TRACK
+========================================================= */
+function updateHud(){
+  document.getElementById('hud-level').textContent = 'Lv ' + xpToLevel(state.xp);
+  var lvlBase = (xpToLevel(state.xp)-1)*50;
+  var pct = Math.min(100, ((state.xp-lvlBase)/50)*100);
+  document.getElementById('hud-xpfill').style.width = pct+'%';
+  document.getElementById('hud-cards').textContent = cardCount()+'/9';
+  updateJournalCount();
+}
+
+function updateJournalCount(){
+  if(journalTab === 'checklist'){
+    var done = CHECKLIST_ITEMS.filter(function(it){ return it.done(); }).length;
+    document.getElementById('journal-count').textContent = done+'/'+CHECKLIST_ITEMS.length;
+  }else{
+    document.getElementById('journal-count').textContent = cardCount()+'/9';
+  }
+}
+
+function refreshJournal(){
+  if(journalTab === 'checklist') renderChecklist();
+  else updateJournal();
+  updateJournalCount();
+}
+
+function updateJournal(){
+  var body = document.getElementById('journal-body');
+  body.innerHTML = '';
+  CARD_ORDER.forEach(function(id){
+    var card = CARDS[id];
+    var have = !!state.cards[id];
+    var el = document.createElement('div');
+    el.className = 'card' + (have ? '' : ' locked');
+    var facts = have ? '<ul>'+card.facts.map(function(f){return '<li>'+f+'</li>';}).join('')+'</ul>' : '';
+    el.innerHTML = '<div class="tag">FIELD DATA</div><h4>'+(have?card.title:'??? Undiscovered')+'</h4>'+facts;
+    body.appendChild(el);
+  });
+}
+
+function renderChecklist(){
+  var body = document.getElementById('journal-body');
+  body.innerHTML = '';
+  CHECKLIST_ITEMS.forEach(function(item){
+    var done = item.done();
+    var el = document.createElement('div');
+    el.className = 'check-item' + (done ? ' done' : '');
+    el.innerHTML =
+      '<div class="check-box">'+(done ? '✓' : '')+'</div>' +
+      '<div><h4>'+item.title+'</h4>' +
+      '<p>'+item.desc+'</p>' +
+      '<div class="how">'+(done ? 'Done — ' : 'How: ')+item.how+'</div>' +
+      '</div>';
+    body.appendChild(el);
+  });
+}
+
+document.getElementById('tab-data').addEventListener('click', function(){
+  if(journalTab === 'data') return;
+  journalTab = 'data';
+  document.getElementById('tab-data').classList.add('active');
+  document.getElementById('tab-checklist').classList.remove('active');
+  document.getElementById('journal-title').textContent = 'FIELD JOURNAL';
+  refreshJournal();
+});
+document.getElementById('tab-checklist').addEventListener('click', function(){
+  if(journalTab === 'checklist') return;
+  journalTab = 'checklist';
+  document.getElementById('tab-checklist').classList.add('active');
+  document.getElementById('tab-data').classList.remove('active');
+  document.getElementById('journal-title').textContent = '3.1 CHECKLIST';
+  refreshJournal();
+});
+
+var ZONE_SEQUENCE = ['beach','otakamiro','maoribay','seasonshrine','examiner'];
+var ZONE_SHORT = { beach:'Dune Frontier', otakamiro:'Otakamiro Pt', maoribay:'Maori Bay', seasonshrine:'Season Shrine', examiner:'Examiner' };
+function updateMapTrack(){
+  var track = document.getElementById('map-track');
+  track.innerHTML = '';
+  var currentIdx = ZONE_SEQUENCE.indexOf(state.zone);
+  ZONE_SEQUENCE.forEach(function(z,i){
+    var d = document.createElement('div');
+    d.className = 'map-dot' + (i<currentIdx ? ' done' : (i===currentIdx ? ' here' : ''));
+    d.textContent = (i+1)+'. '+ZONE_SHORT[z];
+    track.appendChild(d);
+  });
+}
+
+/* =========================================================
+   TOAST
+========================================================= */
+var toastTimer = null;
+function showToast(msg){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+/* =========================================================
+   INPUT
+========================================================= */
+document.addEventListener('keydown', function(e){
+  if(!state.started) return;
+  if(!elOverlay.hidden || !document.getElementById('overlay-help').hidden || !document.getElementById('overlay-reset').hidden || !document.getElementById('overlay-preview').hidden) return;
+  var k = e.key;
+  if(k==='ArrowUp'||k==='w'||k==='W'){ tryMove(0,-1,'up'); e.preventDefault(); }
+  else if(k==='ArrowDown'||k==='s'||k==='S'){ tryMove(0,1,'down'); e.preventDefault(); }
+  else if(k==='ArrowLeft'||k==='a'||k==='A'){ tryMove(-1,0,'left'); e.preventDefault(); }
+  else if(k==='ArrowRight'||k==='d'||k==='D'){ tryMove(1,0,'right'); e.preventDefault(); }
+  else if(k===' '||k==='Enter'){ interact(); e.preventDefault(); }
+});
+document.addEventListener('keyup', function(e){
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'].indexOf(e.key)!==-1){ moving=false; }
+});
+
+document.querySelectorAll('.dpad [data-dir]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    if(!state.started) return;
+    var dir = btn.getAttribute('data-dir');
+    if(dir==='up') tryMove(0,-1,'up');
+    else if(dir==='down') tryMove(0,1,'down');
+    else if(dir==='left') tryMove(-1,0,'left');
+    else if(dir==='right') tryMove(1,0,'right');
+    moving = true;
+    setTimeout(function(){ moving=false; }, 180);
+  });
+});
+document.getElementById('btn-interact').addEventListener('click', function(){ if(state.started) interact(); });
+
+document.getElementById('btn-help').addEventListener('click', function(){ document.getElementById('overlay-help').hidden = false; });
+document.getElementById('btn-help-close').addEventListener('click', function(){ document.getElementById('overlay-help').hidden = true; });
+
+function confirmReset(){ document.getElementById('overlay-reset').hidden = false; }
+document.getElementById('btn-reset').addEventListener('click', confirmReset);
+document.getElementById('btn-reset-cancel').addEventListener('click', function(){ document.getElementById('overlay-reset').hidden = true; });
+document.getElementById('btn-reset-confirm').addEventListener('click', function(){
+  clearSave();
+  document.getElementById('overlay-reset').hidden = true;
+  window.location.reload();
+});
+
+/* =========================================================
+   PREVIEW MODE / ZONE JUMP
+========================================================= */
+function setPreview(on){
+  state.preview = on;
+  document.getElementById('preview-banner').hidden = !on;
+  document.getElementById('btn-preview-toggle').textContent = on ? 'Turn Preview Mode OFF' : 'Turn Preview Mode ON';
+  document.getElementById('btn-preview-toggle').className = on ? 'btn' : 'btn ghost';
+}
+function jumpToZone(zoneId){
+  if(!state.preview) setPreview(true);
+  var zone = ZONES[zoneId];
+  goToZone(zoneId, zone.entry);
+  document.getElementById('overlay-preview').hidden = true;
+}
+document.getElementById('btn-preview').addEventListener('click', function(){
+  if(!state.started) return;
+  document.getElementById('overlay-preview').hidden = false;
+});
+document.getElementById('btn-preview-close').addEventListener('click', function(){
+  document.getElementById('overlay-preview').hidden = true;
+});
+document.getElementById('btn-preview-toggle').addEventListener('click', function(){
+  setPreview(!state.preview);
+});
+document.querySelectorAll('#overlay-preview [data-jump]').forEach(function(btn){
+  btn.addEventListener('click', function(){ jumpToZone(btn.getAttribute('data-jump')); });
+});
+
+/* =========================================================
+   TITLE SCREEN / INIT
+========================================================= */
+function startGame(fromSave){
+  var overlay = document.getElementById('overlay-title');
+  overlay.hidden = true;
+  state.started = true;
+
+  if(fromSave){
+    var s = loadGame();
+    if(s){
+      state.zone=s.zone; state.px=s.px; state.py=s.py; state.dir=s.dir||'down';
+      state.xp=s.xp||0; state.cards=s.cards||{}; state.solved=s.solved||{};
+      state.unlocked=s.unlocked||{}; state.season=s.season||'summer';
+      state.visitedZones=s.visitedZones||{}; state.seasonToggled=!!s.seasonToggled;
+      state.bossExcellence=!!s.bossExcellence;
+      state.essayIntroText=s.essayIntroText||''; state.essayIntroScore=s.essayIntroScore||0;
+    }
+  }
+  state.visitedZones[state.zone] = true;
+  var zone = ZONES[state.zone];
+  document.getElementById('zone-name').textContent = zone.name;
+  document.getElementById('zone-desc').textContent = zone.desc;
+  updateHud();
+  refreshJournal();
+  updateMapTrack();
+}
+
+document.getElementById('btn-start').addEventListener('click', function(){ startGame(false); });
+document.getElementById('btn-newgame').addEventListener('click', function(){ clearSave(); startGame(false); });
+document.getElementById('btn-continue').addEventListener('click', function(){ startGame(true); });
+
+(function initTitle(){
+  var s = loadGame();
+  if(s){
+    document.getElementById('continue-note').hidden = false;
+    document.getElementById('btn-continue').hidden = false;
+    document.getElementById('btn-start').hidden = true;
+  }
+  setPreview(false);
+})();
+
+requestAnimationFrame(loop);
+})();
+</script>
